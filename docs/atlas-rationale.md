@@ -33,6 +33,8 @@ This means that, at its core, _Atlas_ aims to provide the following functionalit
 * To provide a way to systematically generate daily tasks lists;
 * To provide a way to measure one's performance.
 
+All of these aims are to be achieved as intuitively, directly, and simply as possible.
+
 <p align="center">
 <img src="../docs/images/1375061_width_x_height_226x250.png">
 </p>
