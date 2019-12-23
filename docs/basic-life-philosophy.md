@@ -18,7 +18,7 @@ Collections of tasks within a goal can be grouped into **signposts**, which are 
 
 While goals are many, resources are limited. This is a fact of life. In order to accomodate for this, we assign priorities to goals, signposts, and tasks. Since completing tasks is the main activity in this life philosophy, at any given moment in time we have a number of tasks from a range of goals and life areas competing for our attention and resources. We have to be able to systematically determine, on at least a daily basis, what the most important tasks to complete are. This allows us to focus on the most important tasks.
 
-Given our priority settings and schedulling preferences, **daily tasks list** (DTL) is an automatically generated compilation of tasks that need to be done on a particular day.
+Given our priority settings and schedulling preferences, **daily tasks list** (DTL) is an _Atlas_-generated compilation of tasks that need to be done on a particular day. A daily tasks list is the focal point of our basic philosophy of life.
 
 Most people, regardless of their broader philosophical or religious persuasion, should be able to fit under the umbrella of our basic (and very general) life philosophy.
 
@@ -30,7 +30,8 @@ This means that, at its core, _Atlas_ aims to provide the following functionalit
 
 * To provide a way to specify and record goals, signposts, and tasks in all life areas;
 * To provide a way to assign priorities to tasks;
-* To provide a way to systematically generate daily tasks lists.
+* To provide a way to systematically generate daily tasks lists;
+* To provide a way to measure one's performance.
 
 <p align="center">
 <img src="../docs/images/1375061_width_x_height_226x250.png">
