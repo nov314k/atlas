@@ -6,13 +6,15 @@ Here we explain the rationale on the basis of which _Atlas_ was built. In order 
 
 For us, the aim (or purpose) of life is to be happy. We define happiness as the result of achieving goals that we feel are worthwhile. We make no judgements about the 'worthwhile-ness' of anybody's goals; our choice of goals is a part of our personal expression and contribution to the World. A sense of passion and purpose is often the result of correctly identifying what is worthwhile to us.
 
-Our goals generally fall in what we call 'life areas' (LAs). Life areas do not need to be constant or the same for everybody. But, generally they encompass the following areas of human concern: work, family, home, finances, transport, fitness, social life, hobbies, etc. In each of these life areas, we simply want to be content with the status of affairs, and for things to be going well. However, while this general want is valid, it does not really constitute a proper goal.
+Our goals generally fall in what we call **life areas** (LAs). Life areas do not need to be constant or the same for everybody. But, generally they encompass the following areas of human concern: work, family, home, finances, transport, fitness, social life, hobbies, etc. In each of these life areas, we simply want to be content with the status of affairs, and for things to be going well. However, while this general want is valid, it does not really constitute a proper goal.
 
 Goals are specific and timed outcomes. Specific means that their completion can be easily tested and verified, and timed means that they have a certain date by which they need to be achieved. Goals can also be ordered in terms of their relative priorities.
 
-In order to reach our goals, we need to perform a series of actions, sometimes known, and sometimes unknown at the moment of setting the goal. These actions often need to be performed in a certain sequence, and modified based on the intermediate development of events. We formally define these actions as 'tasks'. 
+In order to reach our goals, we need to perform a series (or a sequence) of actions. At the time of setting a goal, it may not be clear which actions to perform, and in what order. Often, as we review our progress towards a goal, it may be necessary to introduce new actions, update old ones, change their order, and so on. Because of this, the due date for achieving a goal is not known with great certainty.
 
+An action, whose outcome is clearly specified and can be tested, and whose duration is known with a considerable degree of certainty, we call a **task**. Tasks lead towards achieving goals, and they can generally be done in 'one go' without much uncertainty.
 
+Now, 
 
 
 
