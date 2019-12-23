@@ -44,7 +44,7 @@ Commands combined into one:
 pip install --upgrade PyQt5 qscintilla python-dateutil
 ```
 
-### Install optional packages (used in development)
+### Install optional packages (used for developing new features)
 
 Commands separated out for clarity:
 
