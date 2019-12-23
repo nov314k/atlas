@@ -14,8 +14,13 @@ In order to reach our goals, we need to perform a series (or a sequence) of acti
 
 An action, whose outcome is clearly specified and can be tested, and whose duration is known with a considerable degree of certainty, we call a **task**. Tasks lead towards achieving goals, and they can generally be done in 'one go', without much uncertainty. While we may not know for sure how to achieve a certain goal, we know how to perform tasks, we have done them (or similar tasks) before.
 
-Collections of tasks within a goal can be grouped into **signposts**, which are basically stepping stones, or sub-goals, on the way to reaching a goal. Signposts are useful in breaking down goals into even more manageable units, which are easier to track and sequence.
+Collections of tasks within a goal can be grouped into **signposts**, which are basically stepping stones, or sub-goals, on the way to reaching a goal. Signposts are useful in breaking down goals into even more manageable units, which are easier to track and sequence. Signposts are effectively the same concept as **composite tasks**, a collection of related tasks. The difference between composite tasks and signposts is that composite tasks are of a more temporary and practical nature, rather than being a more permanent stepping stone on the way to reaching a goal.
 
 Most people, regardless of their broader philosophical or religious persuasion, should be able to fit under the umbrella of our basic (and very general) life philosophy.
+
+## The aim of _Atlas_
+
+The aim of _Atlas_ is to support the application of the basic life philosophy in daily life. It aims to provide a way to specify, record and organize goals, signposts, and tasks in all life areas.
+
 
 
