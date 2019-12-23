@@ -1,4 +1,6 @@
-# Installing Atlas on Windows
+# Installing _Atlas_ on Windows
+
+Perform the following steps in order to install _Atlas_ on Windows.
 
 ## Download source code
 
@@ -10,8 +12,7 @@ git clone https://github.com/novakpetrovic/atlas.git
 
 ## Create a virtual environment
 
-It is best to create and work within a virtual environment.
-This is especially true if you are evaluating Atlas.
+It is best to create and work within a virtual environment. This is especially true if you are evaluating Atlas:
 
 ```
 python -m venv atlas
