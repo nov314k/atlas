@@ -53,7 +53,7 @@ _Atlas_ is free (as in freedom!) and open source software released under the [GN
 
 If you like what you have read so far, here are some more detailed articles that explain Atlas in more detail:
 
-* [_Atlas_ rationale] (docs/atlas-rationale.md)
+* [_Atlas_ rationale](docs/atlas-rationale.md)
 * [Installing _Atlas_ on Windows](docs/installing-atlas-on-windows.md)
 
 <p align="center">
