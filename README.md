@@ -53,9 +53,8 @@ _Atlas_ is free (as in freedom!) and open source software released under the [GN
 
 If you like what you have read so far, here are some more detailed articles that explain Atlas in more detail:
 
-* [_Atlas_ Philosophy] (docs/atlas-philosophy.md)
-* [What is an Atlas portfolio?](docs/what-is-an-atlas-portfolio.md)
-* [Installing Atlas on Windows](docs/installing-atlas-on-windows.md)
+* [_Atlas_ rationale] (docs/atlas-rationale.md)
+* [Installing _Atlas_ on Windows](docs/installing-atlas-on-windows.md)
 
 <p align="center">
 <img src="docs/images/1381638_200x344.png">
