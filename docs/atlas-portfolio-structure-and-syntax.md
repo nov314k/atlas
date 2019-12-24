@@ -149,4 +149,8 @@ Lines that contain only six consecutive semicolons (`;;;;;;`) in columns 0-5 are
 
 Lines that start with a greater-than symbol (`>`), followed by a space, are considered to be info lines in which _Atlas_ is providing information to the user.
 
+<p align="center">
+<img src="../docs/images/1375061_width_x_height_226x250.png">
+</p>
 
+[Return to README](../README.md)
