@@ -34,18 +34,34 @@ python -m pip install --upgrade pip
 
 ### Install required packages
 
-TBD
+Commands separated out for clarity:
+
+```
+python -m pip install --upgrade PyQt5
+python -m pip install --upgrade qscintilla
+python -m pip install --upgrade python-dateutil
+```
+
+Commands combined into one:
+
+```
+pip install --upgrade PyQt5 qscintilla python-dateutil
+```
 
 ### Install optional packages (used for developing new features)
 
-TBD
-
-## Open the example portfolio to test the installation
-
-Open the example portfolio to test the installation:
+Commands separated out for clarity:
 
 ```
-python atlas/main.py docs/example-portfolio/example.json
+python -m pip install --upgrade google-api-python-client
+python -m pip install --upgrade google-auth-httplib2
+python -m pip install --upgrade google-auth-oauthlib
+```
+
+Commands combined into one:
+
+```
+pip install --upgrade google-api-python-client google-auth-httplib2 google-auth-oauthlib
 ```
 
 <p align="center">
