@@ -60,14 +60,6 @@ Commands combined into one:
 pip install --upgrade google-api-python-client google-auth-httplib2 google-auth-oauthlib
 ```
 
-## Open the example portfolio to test the installation
-
-Open the example portfolio to test the installation:
-
-```
-python atlas/main.py docs/example-portfolio/example.json
-```
-
 <p align="center">
 <img src="../docs/images/1375061_width_x_height_226x250.png">
 </p>
