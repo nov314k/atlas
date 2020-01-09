@@ -60,7 +60,7 @@ If you like what you have read so far, here are some more detailed articles that
 
 ## Links
 
-* [Links](docs/links.md)
+* [Useful links](docs/links.md)
 
 <p align="center">
 <img src="docs/images/1381638_200x344.png">
