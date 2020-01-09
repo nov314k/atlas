@@ -58,9 +58,9 @@ If you like what you have read so far, here are some more detailed articles that
 * [Installing _Atlas_ on Windows](docs/installing-atlas-on-windows.md)
 * [Installing _Atlas_ on Ubuntu](docs/installing-atlas-on-ubuntu.md)
 
-## Links
+## Useful links
 
-* [Useful links](docs/links.md)
+* [Useful links](docs/useful-links.md)
 
 <p align="center">
 <img src="docs/images/1381638_200x344.png">
