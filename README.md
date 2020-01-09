@@ -56,6 +56,15 @@ If you like what you have read so far, here are some more detailed articles that
 * [_Atlas_ rationale](docs/atlas-rationale.md)
 * [_Atlas_ portfolio structure and syntax](docs/atlas-portfolio-structure-and-syntax.md)
 * [Installing _Atlas_ on Windows](docs/installing-atlas-on-windows.md)
+* [Installing _Atlas_ on Ubuntu](docs/installing-atlas-on-ubuntu.md)
+
+## Links
+
+* [https://www.riverbankcomputing.com/static/Docs/PyQt5/](https://www.riverbankcomputing.com/static/Docs/PyQt5/)
+* [https://www.scintilla.org/ScintillaDoc.html](https://www.scintilla.org/ScintillaDoc.html)
+* [https://github.com/pyqt/python-qt5/blob/master/PyQt5/Qsci.pyi](https://github.com/pyqt/python-qt5/blob/master/PyQt5/Qsci.pyi)
+* [https://stackoverflow.com/questions/7719806/preventing-keyboard-shortcuts-being-triggered-in-qscintilla-example-code](- https://stackoverflow.com/questions/7719806/preventing-keyboard-shortcuts-being-triggered-in-qscintilla-example-code)
+* [https://stackoverflow.com/questions/47622714/how-to-assign-qscintilla-shortcuts](https://stackoverflow.com/questions/47622714/how-to-assign-qscintilla-shortcuts)
 
 <p align="center">
 <img src="docs/images/1381638_200x344.png">
