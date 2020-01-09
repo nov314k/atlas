@@ -1,4 +1,4 @@
-# Links
+# Useful links
 
 * [https://www.riverbankcomputing.com/static/Docs/PyQt5/](https://www.riverbankcomputing.com/static/Docs/PyQt5/)
 * [https://www.scintilla.org/ScintillaDoc.html](https://www.scintilla.org/ScintillaDoc.html)
@@ -7,5 +7,7 @@
 * [https://stackoverflow.com/questions/47622714/how-to-assign-qscintilla-shortcuts](https://stackoverflow.com/questions/47622714/how-to-assign-qscintilla-shortcuts)
 
 <p align="center">
-<img src="docs/images/1381638_200x344.png">
+<img src="../docs/images/1375061_width_x_height_226x250.png">
 </p>
+
+[Return to README](../README.md)
