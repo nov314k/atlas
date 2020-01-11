@@ -31,8 +31,15 @@ class TopLevelWindow(QMainWindow):
     open_file = pyqtSignal(str)
     previous_folder = None
 
-    def __init__(self, parent=None):
+    def __init__(self, config, parent=None):
         super().__init__(parent)
+        
+        self.cfg = config.cfg
+        if self.cfg['newline'] == 'linux':
+            self.c_newline = '\n'
+        else:
+            self.c_newline = '\r\n'
+        
         self.widget = QWidget()
         self.read_only_tabs = False
         self.menu_bar = MenuBar(self.widget)
@@ -40,6 +47,7 @@ class TopLevelWindow(QMainWindow):
         self.open_file_heading = "Open file"
         self.save_file_heading = "Save file"
         self.atlas_file_extension_for_saving = "Atlas (*.pmd.txt)"
+        self.setup()
 
     def setup(self):
         """Docstring."""
@@ -209,10 +217,10 @@ class TopLevelWindow(QMainWindow):
         logs_menu.addAction(log_progress)
         actions['log_progress'] = log_progress
 
-        log_expense = QAction("Log expense", self)
-        log_expense.setShortcut("Alt+E")
-        logs_menu.addAction(log_expense)
-        actions['log_expense'] = log_expense
+        # ~ log_expense = QAction("Log expense", self)
+        # ~ log_expense.setShortcut("Alt+E")
+        # ~ logs_menu.addAction(log_expense)
+        # ~ actions['log_expense'] = log_expense
 
         back_up = QAction("Back up portfolio", self)
         back_up.setShortcut("Alt+B")
@@ -243,15 +251,36 @@ class TopLevelWindow(QMainWindow):
         other_menu.addAction(extract_shlist)
         actions['extract_shlist'] = extract_shlist
 
-        # Connections
-        for key in actions:
-            actions[key].triggered.connect(functions[key])
+        # Connect actions with functions
+        for action in actions:
+            actions[action].triggered.connect(functions[action])
 
     @property
     def current_tab(self):
         """Docstring."""
 
         return self.tabs.currentWidget()
+
+    @property
+    def modified(self):
+        """Docstring."""
+
+        for widget in self.widgets:
+            if widget.isModified():
+                return True
+        return False
+
+    @property
+    def tab_count(self):
+        """Docstring."""
+
+        return self.tabs.count()
+
+    @property
+    def widgets(self):
+        """Docstring."""
+
+        return [self.tabs.widget(i) for i in range(self.tab_count)]
 
     def get_open_file_path(self, folder, extensions):
         """Get the path of the file to load (dialog)."""
@@ -298,27 +327,6 @@ class TopLevelWindow(QMainWindow):
         if self.read_only_tabs:
             new_tab.setReadOnly(self.read_only_tabs)
         return new_tab
-
-    @property
-    def tab_count(self):
-        """Docstring."""
-
-        return self.tabs.count()
-
-    @property
-    def widgets(self):
-        """Docstring."""
-
-        return [self.tabs.widget(i) for i in range(self.tab_count)]
-
-    @property
-    def modified(self):
-        """Docstring."""
-
-        for widget in self.widgets:
-            if widget.isModified():
-                return True
-        return False
 
     def show_message(self, message, information=None, icon=None):
         """Docstring."""
@@ -379,49 +387,49 @@ class TopLevelWindow(QMainWindow):
             title += " - " + filename
         self.setWindowTitle(title)
 
-    def change_mode(self):
-        """Docstring."""
+    # ~ def change_mode(self):
+        # ~ """Docstring."""
 
-        self.button_bar.change_mode()
+        # ~ self.button_bar.change_mode()
 
-    def set_timer(self, duration, callback):
-        """Docstring."""
+    # ~ def set_timer(self, duration, callback):
+        # ~ """Docstring."""
 
-        self.timer = QTimer()
-        self.timer.timeout.connect(callback)
-        self.timer.start(duration * 1000)  # Measured in milliseconds.
+        # ~ self.timer = QTimer()
+        # ~ self.timer.timeout.connect(callback)
+        # ~ self.timer.start(duration * 1000)  # Measured in milliseconds.
 
-    def stop_timer(self):
-        """Docstring."""
+    # ~ def stop_timer(self):
+        # ~ """Docstring."""
 
-        if self.timer:
-            self.timer.stop()
-            self.timer = None
+        # ~ if self.timer:
+            # ~ self.timer.stop()
+            # ~ self.timer = None
 
-    def connect_prepare_day_plan(self, handler, shortcut):
-        """Docstring."""
+    # ~ def connect_prepare_day_plan(self, handler, shortcut):
+        # ~ """Docstring."""
 
-        self.prepare_day_plan_shortcut = QShortcut(QKeySequence(shortcut),
-                                                   self)
-        self.prepare_day_plan_shortcut.activated.connect(handler)
+        # ~ self.prepare_day_plan_shortcut = QShortcut(QKeySequence(shortcut),
+                                                   # ~ self)
+        # ~ self.prepare_day_plan_shortcut.activated.connect(handler)
 
-    def connect_log_progress(self, handler, shortcut):
-        """Docstring."""
+    # ~ def connect_log_progress(self, handler, shortcut):
+        # ~ """Docstring."""
 
-        self.log_progress_shortcut = QShortcut(QKeySequence(shortcut), self)
-        self.log_progress_shortcut.activated.connect(handler)
+        # ~ self.log_progress_shortcut = QShortcut(QKeySequence(shortcut), self)
+        # ~ self.log_progress_shortcut.activated.connect(handler)
 
-    def connect_log_expense(self, handler, shortcut):
-        """Docstring."""
+    # ~ def connect_log_expense(self, handler, shortcut):
+        # ~ """Docstring."""
 
-        self.log_expense_shortcut = QShortcut(QKeySequence(shortcut), self)
-        self.log_expense_shortcut.activated.connect(handler)
+        # ~ self.log_expense_shortcut = QShortcut(QKeySequence(shortcut), self)
+        # ~ self.log_expense_shortcut.activated.connect(handler)
 
-    def connect_add_adhoc_task(self, handler, shortcut):
-        """Docstring."""
+    # ~ def connect_add_adhoc_task(self, handler, shortcut):
+        # ~ """Docstring."""
 
-        self.adhoc_task_shortcut = QShortcut(QKeySequence(shortcut), self)
-        self.adhoc_task_shortcut.activated.connect(handler)
+        # ~ self.adhoc_task_shortcut = QShortcut(QKeySequence(shortcut), self)
+        # ~ self.adhoc_task_shortcut.activated.connect(handler)
 
     def show_prepare_day_plan(self, target_day, target_month, target_year):
         """Docstring."""
@@ -451,3 +459,67 @@ class TopLevelWindow(QMainWindow):
         if adhoc_task.exec():
             return adhoc_task.adhoc_task()
         return None
+    
+    def goto_tab_left(self):
+        """Change focus to one tab left. Allows for wrapping around."""
+
+        tab = self.current_tab
+        index = self.tabs.indexOf(tab)
+        if index-1 < 0:
+            next_tab = self.tab_count - 1
+        else:
+            next_tab = index - 1
+        self.tabs.setCurrentIndex(next_tab)
+
+    def goto_tab_right(self):
+        """Change focus to one tab right. Allows for wrapping around."""
+
+        tab = self.current_tab
+        index = self.tabs.indexOf(tab)
+        if index+1 > self.tab_count-1:
+            next_tab = 0
+        else:
+            next_tab = index + 1
+        self.tabs.setCurrentIndex(next_tab)
+
+    def move_line_up(self):
+        """Move current line of text one row up."""
+
+        tab = self.current_tab
+        first_visible_line = tab.firstVisibleLine()
+        tasks = tab.text().split('\n')
+        row = tab.getCursorPosition()[0]
+        if row > 0:
+            for i, _ in enumerate(tasks):
+                if i == row - 1:
+                    temp = tasks[i]
+                    tasks[i] = tasks[i + 1]
+                    tasks[i + 1] = temp
+            contents = ""
+            for task in tasks:
+                contents += task + self.c_newline
+            contents = contents.rstrip(self.c_newline)
+            tab.SendScintilla(tab.SCI_SETTEXT, contents.encode(self.cfg['encoding']))
+            tab.setFirstVisibleLine(first_visible_line)
+            tab.setCursorPosition(row - 1, 0)
+
+    def move_line_down(self):
+        """Move current line of text one row down."""
+
+        tab = self.current_tab
+        first_visible_line = tab.firstVisibleLine()
+        tasks = tab.text().split(self.c_newline)
+        row = tab.getCursorPosition()[0]
+        if row < len(tasks) - 1:
+            for i in range(len(tasks) - 1, -1, -1):
+                if i == row + 1:
+                    temp = tasks[i]
+                    tasks[i] = tasks[i - 1]
+                    tasks[i - 1] = temp
+            contents = ""
+            for task in tasks:
+                contents += task + self.c_newline
+            contents = contents.rstrip(self.c_newline)
+            tab.SendScintilla(tab.SCI_SETTEXT, contents.encode(self.cfg['encoding']))
+            tab.setFirstVisibleLine(first_visible_line)
+            tab.setCursorPosition(row + 1, 0)

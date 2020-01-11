@@ -6,12 +6,12 @@ import datetime
 # from calfs.get_coming_events import get_coming_events
 
 
-def prepare_todays_tasks(day, month, year, settings_file):
+def prepare_todays_tasks(day, month, year, config_file):
     """Docstring."""
 
     config = configparser.ConfigParser(
             interpolation=configparser.ExtendedInterpolation())
-    config.read(settings_file)
+    config.read(config_file)
     cfg = config['USER']
 
     portfolio_files = cfg['portfolio_files'].split('\n')

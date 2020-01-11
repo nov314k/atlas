@@ -8,7 +8,6 @@ from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import QApplication
 
 from view.font import Font
-from model.logic import NEWLINE
 
 
 class EditorPane(QsciScintilla):
@@ -16,7 +15,7 @@ class EditorPane(QsciScintilla):
 
     open_file = pyqtSignal(str)
 
-    def __init__(self, path, text, newline=NEWLINE):
+    def __init__(self, path, text, newline):
         """Docstring."""
 
         super().__init__()
