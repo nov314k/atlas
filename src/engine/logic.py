@@ -34,7 +34,7 @@ import sys
 from dateutil.relativedelta import relativedelta
 from pathlib import Path
 from PyQt5.QtWidgets import QMessageBox
-import model.prepare_todays_tasks
+import engine.prepare_todays_tasks
 
 
 def sort_tasks(tasks, tags_in_sorting_order):

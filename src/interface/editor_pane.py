@@ -7,7 +7,7 @@ from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import QApplication
 
-from view.font import Font
+from interface.font import Font
 
 
 class EditorPane(QsciScintilla):
@@ -19,7 +19,6 @@ class EditorPane(QsciScintilla):
         """Docstring."""
 
         super().__init__()
-        self.setUtf8(True)
         self.path = path
         self.setText(text)
         self.newline = newline
@@ -52,12 +51,10 @@ class EditorPane(QsciScintilla):
         self.setTabWidth(4)
         self.setEdgeColumn(119)
         self.setEdgeMode(1)
-        self.setMarginLineNumbers(0, True)
+        self.setMarginLineNumbers(-1, True)
         self.setMarginWidth(0, 25)
         self.setBraceMatching(QsciScintilla.SloppyBraceMatch)
         self.SendScintilla(QsciScintilla.SCI_SETHSCROLLBAR, 0)
-        self.setMarginSensitivity(0, True)
-        self.setMarginSensitivity(1, True)
         self.setMarginWidth(4, 8)
         self.setMarginSensitivity(4, True)
         self.selectionChanged.connect(self.selection_change_listener)

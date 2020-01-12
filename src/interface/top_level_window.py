@@ -1,5 +1,10 @@
 """Docstring."""
 
+import os
+import datetime
+import re
+import sys
+
 from PyQt5.QtCore import Qt, pyqtSignal, QTimer
 from PyQt5.QtWidgets import (QAction, QDesktopWidget, QWidget, QVBoxLayout,
                              QTabWidget, QFileDialog, QMessageBox, QMainWindow,
@@ -7,12 +12,12 @@ from PyQt5.QtWidgets import (QAction, QDesktopWidget, QWidget, QVBoxLayout,
 from PyQt5.QtGui import QKeySequence
 from PyQt5.QtGui import QIcon
 from pkg_resources import resource_filename
-from view.prepare_day_dialog import PrepareDayDialog
-from view.log_progress_dialog import LogProgressDialog
-from view.add_adhoc_task_dialog import AddAdhocTaskDialog
-from view.editor_pane import EditorPane
-from view.menu_bar import MenuBar
-from view.file_tabs import FileTabs
+from interface.prepare_day_dialog import PrepareDayDialog
+from interface.log_progress_dialog import LogProgressDialog
+from interface.add_adhoc_task_dialog import AddAdhocTaskDialog
+from interface.editor_pane import EditorPane
+from interface.menu_bar import MenuBar
+from interface.file_tabs import FileTabs
 
 
 def screen_size():
@@ -31,10 +36,14 @@ class TopLevelWindow(QMainWindow):
     open_file = pyqtSignal(str)
     previous_folder = None
 
-    def __init__(self, config, parent=None):
+    def __init__(self, config, engine, parent=None):
+        """TopLevelWindow init."""
+
         super().__init__(parent)
-        
+        self._engine = engine
         self.cfg = config.cfg
+        self.c_space = self.cfg['space'][1]
+        self.c_active_task_prefixes = self.cfg['active_task_prefixes']
         if self.cfg['newline'] == 'linux':
             self.c_newline = '\n'
         else:
@@ -103,6 +112,11 @@ class TopLevelWindow(QMainWindow):
         save_file_as = QAction("Save file as", self)
         file_menu.addAction(save_file_as)
         actions['save_file_as'] = save_file_as
+
+
+        save_file_all = QAction("Save all files", self)
+        file_menu.addAction(save_file_all)
+        actions['save_file_all'] = save_file_all
 
         close_file = QAction("Close file", self)
         close_file.setShortcut("Ctrl+W")
@@ -282,26 +296,9 @@ class TopLevelWindow(QMainWindow):
 
         return [self.tabs.widget(i) for i in range(self.tab_count)]
 
-    def get_open_file_path(self, folder, extensions):
-        """Get the path of the file to load (dialog)."""
+    # START Utility Functions
 
-        extensions = '*' + extensions
-        path, _ = QFileDialog.getOpenFileName(self.widget,
-                                              self.open_file_heading,
-                                              folder,
-                                              extensions)
-        return path
-
-    def get_save_file_path(self, folder):
-        """Get the path of the file to save (dialog)."""
-
-        path, _ = QFileDialog.getSaveFileName(
-                self.widget,
-                self.open_file_heading, folder,
-                self.atlas_file_extension_for_saving)
-        return path
-
-    def add_tab(self, path, text, newline):
+    def _add_tab(self, path, text, newline):
         """Docstring."""
 
         new_tab = EditorPane(path, text, newline)
@@ -328,138 +325,220 @@ class TopLevelWindow(QMainWindow):
             new_tab.setReadOnly(self.read_only_tabs)
         return new_tab
 
-    def show_message(self, message, information=None, icon=None):
-        """Docstring."""
+    def _get_open_file_path(self, folder, extensions):
+        """Get the path of the file to load (dialog)."""
 
-        message_box = QMessageBox(self)
-        message_box.setText(message)
-        message_box.setWindowTitle("Atlas")
-        if information:
-            message_box.setInformativeText(information)
-        if icon and hasattr(message_box, icon):
-            message_box.setIcon(getattr(message_box, icon))
-        else:
-            message_box.setIcon(message_box.Warning)
-        message_box.exec()
+        extensions = '*' + extensions
+        path, _ = QFileDialog.getOpenFileName(self.widget,
+                                              self.open_file_heading,
+                                              folder,
+                                              extensions)
+        return path
 
-    def show_confirmation(self, message, information=None, icon=None):
-        """Docstring."""
+    def _get_save_file_path(self, folder):
+        """Get the path of the file to save (dialog)."""
 
-        message_box = QMessageBox(self)
-        message_box.setText(message)
-        message_box.setWindowTitle("Atlas")
-        if information:
-            message_box.setInformativeText(information)
-        if icon and hasattr(message_box, icon):
-            message_box.setIcon(getattr(message_box, icon))
-        else:
-            message_box.setIcon(message_box.Warning)
-        message_box.setStandardButtons(message_box.Cancel | message_box.Ok)
-        message_box.setDefaultButton(message_box.Cancel)
-        return message_box.exec()
+        path, _ = QFileDialog.getSaveFileName(
+                self.widget,
+                self.open_file_heading, folder,
+                self.atlas_file_extension_for_saving)
+        return path
 
-    def show_yes_no_question(self, message, information=None):
-        """Ask the user a yes/no/cancel question.
+    def _read_file(self, fpath, single_string=False):
+        with open(fpath, 'r') as fpath_:
+            if single_string:
+                lines = fpath_.read()
+            else:
+                lines = fpath_.readlines()
+        return lines
 
-        Answering 'Yes' allows for performing a certain action; answering 'No'
-        allows for not performing the same action. Answering with 'Cancel'
-        aborts the question and goes back to normal program operation mode so
-        that the user can make their decision in that mode before proceeding.
+    def _running_from_daily_tasks_file(self, tab):
+        """Check if the command is issued while a daily tasks tab is active.
+
+        :param tab widget: active tab when the command was invoked
+        :type tab: widget
+        :returns boolean:
+        """
+
+        file_name = os.path.basename(tab.path).split('.')[0]
+        if not re.match(r'\d{8}', file_name):
+            message = ("This command can only be run"
+                       "from a daily tasks file.")
+            self.show_message(message)
+            return False
+        return True
+
+    def portfolio_open(self):
+        """Function docstring."""
+
+        launch_paths = set()
+        for old_path in self.cfg['tab_order'].split('\n'):
+            if old_path in launch_paths:
+                continue
+            self.file_open(old_path)
+        danas = datetime.datetime.now()
+        file_name = str(danas.year)
+        if danas.month < 10:
+            file_name += "0"
+        file_name += str(danas.month)
+        if danas.day < 10:
+            file_name += "0"
+        file_name += str(danas.day)
+        file_name += self.cfg['atlas_files_extension']
+        if os.path.isfile(self.cfg['portfolio_base_dir'] + file_name):
+            self.file_open(self.cfg['portfolio_base_dir'] + file_name)
+
+    def portfolio_quit(self):
+        """Quit Atlas.
+
+        Confirm if and how the user wants to save changes. Saves session
+        settings before exiting.
 
         """
 
-        message_box = QMessageBox(self)
-        message_box.setWindowTitle("Atlas")
-        message_box.setText(message)
-        if information:
-            message_box.setInformativeText(information)
-        message_box.setIcon(message_box.Question)
-        message_box.setStandardButtons(
-            message_box.Yes | message_box.No | message_box.Cancel)
-        message_box.setDefaultButton(message_box.Yes)
-        return message_box.exec()
+        for tab in self.widgets:
+            current_tab_index = self.tabs.indexOf(tab)
+            self.tabs.setCurrentIndex(current_tab_index)
+            user_chose_yes_or_no = self.file_close()
+            if not user_chose_yes_or_no:
+                return
+        # self.save_session_settings()
+        sys.exit(0)
 
-    def update_title(self, filename=None):
-        """Docstring."""
+    def portfolio_reload_currently_open_files(self):
+        for tab in self.widgets:
+            contents = self._read_file(tab.path, single_string=True)
+            tab.setText(contents)
 
-        title = self.title
-        if filename:
-            title += " - " + filename
-        self.setWindowTitle(title)
+    def file_new(self):
+        """Add a new tab."""
 
-    # ~ def change_mode(self):
-        # ~ """Docstring."""
-
-        # ~ self.button_bar.change_mode()
-
-    # ~ def set_timer(self, duration, callback):
-        # ~ """Docstring."""
-
-        # ~ self.timer = QTimer()
-        # ~ self.timer.timeout.connect(callback)
-        # ~ self.timer.start(duration * 1000)  # Measured in milliseconds.
-
-    # ~ def stop_timer(self):
-        # ~ """Docstring."""
-
-        # ~ if self.timer:
-            # ~ self.timer.stop()
-            # ~ self.timer = None
-
-    # ~ def connect_prepare_day_plan(self, handler, shortcut):
-        # ~ """Docstring."""
-
-        # ~ self.prepare_day_plan_shortcut = QShortcut(QKeySequence(shortcut),
-                                                   # ~ self)
-        # ~ self.prepare_day_plan_shortcut.activated.connect(handler)
-
-    # ~ def connect_log_progress(self, handler, shortcut):
-        # ~ """Docstring."""
-
-        # ~ self.log_progress_shortcut = QShortcut(QKeySequence(shortcut), self)
-        # ~ self.log_progress_shortcut.activated.connect(handler)
-
-    # ~ def connect_log_expense(self, handler, shortcut):
-        # ~ """Docstring."""
-
-        # ~ self.log_expense_shortcut = QShortcut(QKeySequence(shortcut), self)
-        # ~ self.log_expense_shortcut.activated.connect(handler)
-
-    # ~ def connect_add_adhoc_task(self, handler, shortcut):
-        # ~ """Docstring."""
-
-        # ~ self.adhoc_task_shortcut = QShortcut(QKeySequence(shortcut), self)
-        # ~ self.adhoc_task_shortcut.activated.connect(handler)
-
-    def show_prepare_day_plan(self, target_day, target_month, target_year):
-        """Docstring."""
-
-        # ~ finder = FindReplaceDialog(self)
-        finder = PrepareDayDialog(self)
-        finder.setup(target_day, target_month, target_year)
-        if finder.exec():
-            return (finder.target_day(), finder.target_month(),
-                    finder.target_year())
-        return None
-
-    def show_log_progress(self):
-        """Docstring."""
-
-        log_entry = LogProgressDialog(self)
-        log_entry.setup()
-        if log_entry.exec():
-            return log_entry.log_entry()
-        return None
-
-    def show_add_adhoc_task(self):
-        """Docstring."""
-
-        adhoc_task = AddAdhocTaskDialog(self)
-        adhoc_task.setup()
-        if adhoc_task.exec():
-            return adhoc_task.adhoc_task()
-        return None
+        self._add_tab(None, "", self.c_newline)
     
+    def file_open(self, path=None):
+        """Open a file from disk in a new tab.
+
+        If `path` is not specified, it displays a dialog for the user to choose
+        the path to open. Does not open an already opened file.
+
+        Parameters
+        ----------
+        path : str
+            Path to save tab contents to.
+
+        """
+
+        # Get the path from the user if it's not defined
+        if not path:
+            path = self._get_open_file_path(
+                    self.cfg['portfolio_base_dir'],
+                    self.cfg['atlas_files_extension'])
+        # Was the dialog canceled?
+        if not path:
+            return
+        # Do not open a life area if it is already open
+        for widget in self.widgets:
+            if os.path.samefile(path, widget.path):
+                msg = "'{}' is already open."
+                self.show_message(msg.format(os.path.basename(path)))
+                self.focus_tab(widget)
+                return
+        file_content = ''
+        with open(path, encoding=self.cfg['encoding']) as faux:
+            lines = faux.readlines()
+            for line in lines:
+                file_content += line
+        self._add_tab(path, file_content, '\n')
+
+    def file_save(self, path=None, tab=None):
+        """Save file contained in a tab to disk.
+
+        If `tab` is not specified, it assumes that we want to save the file
+        contained in the currently active tab. If it is a newly added tab
+        not save before (and hence a file does not exist on disk), a dialog is
+        displayed to choose the save path. Even though the path of a tab is
+        contained in the tab, due to different usage scenarios for this
+        function, it is best to keep these two parameters separate.
+
+        Parameters
+        ----------
+        path : str
+            Path to save tab contents to.
+        tab : EditorPane
+            Tab containing the contents to save to `path`.
+
+        """
+        # TODO Review logic!
+        if not tab:
+            tab = self.current_tab
+        if not path:
+            # If it is a newly added tab, not saved before
+            if tab.path is None:
+                tab.path = self._get_save_file_path(
+                        self.cfg['portfolio_base_dir'])
+            # Was the dialog canceled?
+            if not tab.path:
+                return
+            path = tab.path
+        with open(path, 'w', encoding=self.cfg['encoding']) as path_:
+            path_.writelines(tab.text())
+        tab.setModified(False)
+
+    def file_save_as(self):
+        """Save file in active tab to a different path.
+
+        After getting the new path, it checks if the new path is already open.
+        If it is not open, calls `self.save_file()` with the new file name
+        provided.
+
+        """
+
+        path = self.get_save_file_path(self.cfg['portfolio_base_dir'])
+        # Was the dialog canceled?
+        if not path:
+            return
+        for widget in self.widgets:
+            if widget.path == path:
+                # if os.path.samefile(path, widget.path):
+                msg = "'{}' is open. Close if before overwriting."
+                self.show_message(msg.format(os.path.basename(path)))
+                self.focus_tab(widget)
+                return
+        self.file_save(path)
+
+    def file_save_all(self):
+        for tab in self.widgets:
+            ctab_idx = self.tabs.indexOf(tab)
+            self.tabs.setCurrentIndex(ctab_idx)
+            self.file_save(path=tab.path, tab=tab)
+            # TODO Make sure you return to current tab!!
+
+    def file_close(self):
+        """Close the current file (remove the current tab).
+
+        Returning `False` indicates that the user, when answering to the
+        question, chose 'Cancel'. Returning `True` indicates that the user
+        answered with either 'Yes' or 'No'. This is primarily used by `quit()`
+        to indicate whether to abort the quitting process if a user choses
+        'Cancel'. If a user choses 'Cancel', they decide that they want to deal
+        with the changes in the file in the normal program operation mode
+        ('manually').
+
+        """
+
+        current_tab = self.current_tab
+        current_tab_idx = self.tabs.indexOf(current_tab)
+        if current_tab.isModified():
+            answer = self.show_yes_no_question(
+                "Do you want to save changes to the file before closing?",
+                "File:    " + current_tab.path)
+            if answer == QMessageBox.Yes:
+                self.save_file()
+            if answer == QMessageBox.Cancel:
+                return False
+        self.tabs.removeTab(current_tab_idx)
+        return True
+
     def goto_tab_left(self):
         """Change focus to one tab left. Allows for wrapping around."""
 
@@ -523,3 +602,125 @@ class TopLevelWindow(QMainWindow):
             tab.SendScintilla(tab.SCI_SETTEXT, contents.encode(self.cfg['encoding']))
             tab.setFirstVisibleLine(first_visible_line)
             tab.setCursorPosition(row + 1, 0)
+
+    def mark_task_done(self):
+        """Mark current task as done.
+
+        Marks the current task as done first in the daily tasks file, and then
+        also at task definition. This method can only be run from a daily tasks
+        file, and only on tasks that have an `open_task_prefix`. It calls
+        `mark_ordinary_task_done()` to do the actual work. Special care is
+        taken to preserve the view. After marking a task as done, it calls
+        `analyse_tasks()` and `schedule_tasks()` to refresh the information.
+
+        Notes
+        -----
+        In current code, care has been taken to avoid the bug where tab title
+        is incorrectly changed when switching between tabs. Be aware of this
+        when changing the code.
+
+        """
+
+        ctab = self.current_tab
+        self.file_save_all()
+        if not self._running_from_daily_tasks_file(ctab):
+            return
+        ctab_idx = self.tabs.indexOf(ctab)
+        fv_line = ctab.firstVisibleLine()
+        crow = ctab.getCursorPosition()[0]
+        ctask = ctab.text(crow)
+        ctask = re.sub(r'\d{2}:\d{2}' + self.c_space, "", ctask)
+        if (ctask and ctask[0] not in self.c_active_task_prefixes):
+            return
+        self._engine.mark_ordinary_task_done(ctab.path, crow)
+        self.portfolio_reload_currently_open_files()
+        ctab.setFirstVisibleLine(fv_line)
+        ctab.setCursorPosition(crow, 0)
+
+    def show_message(self, message, information=None, icon=None):
+        """Docstring."""
+
+        message_box = QMessageBox(self)
+        message_box.setText(message)
+        message_box.setWindowTitle("Atlas")
+        if information:
+            message_box.setInformativeText(information)
+        if icon and hasattr(message_box, icon):
+            message_box.setIcon(getattr(message_box, icon))
+        else:
+            message_box.setIcon(message_box.Warning)
+        message_box.exec()
+
+    def show_confirmation(self, message, information=None, icon=None):
+        """Docstring."""
+
+        message_box = QMessageBox(self)
+        message_box.setText(message)
+        message_box.setWindowTitle("Atlas")
+        if information:
+            message_box.setInformativeText(information)
+        if icon and hasattr(message_box, icon):
+            message_box.setIcon(getattr(message_box, icon))
+        else:
+            message_box.setIcon(message_box.Warning)
+        message_box.setStandardButtons(message_box.Cancel | message_box.Ok)
+        message_box.setDefaultButton(message_box.Cancel)
+        return message_box.exec()
+
+    def show_yes_no_question(self, message, information=None):
+        """Ask the user a yes/no/cancel question.
+
+        Answering 'Yes' allows for performing a certain action; answering 'No'
+        allows for not performing the same action. Answering with 'Cancel'
+        aborts the question and goes back to normal program operation mode so
+        that the user can make their decision in that mode before proceeding.
+
+        """
+
+        message_box = QMessageBox(self)
+        message_box.setWindowTitle("Atlas")
+        message_box.setText(message)
+        if information:
+            message_box.setInformativeText(information)
+        message_box.setIcon(message_box.Question)
+        message_box.setStandardButtons(
+            message_box.Yes | message_box.No | message_box.Cancel)
+        message_box.setDefaultButton(message_box.Yes)
+        return message_box.exec()
+
+    def update_title(self, filename=None):
+        """Docstring."""
+
+        title = self.title
+        if filename:
+            title += " - " + filename
+        self.setWindowTitle(title)
+
+    def show_prepare_day_plan(self, target_day, target_month, target_year):
+        """Docstring."""
+
+        # ~ finder = FindReplaceDialog(self)
+        finder = PrepareDayDialog(self)
+        finder.setup(target_day, target_month, target_year)
+        if finder.exec():
+            return (finder.target_day(), finder.target_month(),
+                    finder.target_year())
+        return None
+
+    def show_log_progress(self):
+        """Docstring."""
+
+        log_entry = LogProgressDialog(self)
+        log_entry.setup()
+        if log_entry.exec():
+            return log_entry.log_entry()
+        return None
+
+    def show_add_adhoc_task(self):
+        """Docstring."""
+
+        adhoc_task = AddAdhocTaskDialog(self)
+        adhoc_task.setup()
+        if adhoc_task.exec():
+            return adhoc_task.adhoc_task()
+        return None

@@ -8,9 +8,9 @@ from PyQt5.QtWidgets import QApplication
 from pathlib import Path
 
 from configuration import Configuration
-from model.logic import Model
-from view.top_level_window import TopLevelWindow
-from controller import Controller
+from engine.engine import Engine
+from interface.top_level_window import TopLevelWindow
+from driver import Driver
 
 def run():
     logging.basicConfig(
@@ -33,12 +33,13 @@ def run():
         app.setPalette(palette)
 
     config = Configuration(Path(sys.argv[1]))
-    view = TopLevelWindow(config)
-    model = Model(config, view)
-    controller = Controller(config, view, model)
+    engine = Engine(config)
+    interface = TopLevelWindow(config, engine)
+    driver = Driver(config, interface, engine)
 
-    view.closeEvent = controller.quit
-    view.show()
+    # TODO I need to pass the correct arguments here!
+    interface.closeEvent = interface.portfolio_quit
+    interface.show()
     
     sys.exit(app.exec_())
 
