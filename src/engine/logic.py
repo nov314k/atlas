@@ -2,7 +2,7 @@
 
 Copyright notice
 ----------------
-Copyright (C) 2019 Novak Petrovic
+Copyright (C) 2019, 2020 Novak Petrovic
 <npetrovic@gmail.com>
 
 This file is part of Atlas.
@@ -68,8 +68,8 @@ class Model:
             self.c_newline = '\n'
         else:
             self.c_newline = '\r\n'
-        self.c_active_task_prefixes = self.cfg['active_task_prefixes']
-        self.c_portfolio_files = self.cfg['portfolio_files']
+        self.c_active_task_prefixes = self.cfg['cfg_active_task_prefixes']
+        self.c_portfolio_files = self.cfg['cfg_portfolio_files']
         self._view = view
         # self.read_settings_file(self.config_file)
 

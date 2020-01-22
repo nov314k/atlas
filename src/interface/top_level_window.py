@@ -42,8 +42,8 @@ class TopLevelWindow(QMainWindow):
         super().__init__(parent)
         self._engine = engine
         self.cfg = config.cfg
-        self.c_space = self.cfg['space'][1]
-        self.c_active_task_prefixes = self.cfg['active_task_prefixes']
+        self.c_space = config.cfg['space'][1]
+        self.c_active_task_prefixes = config.cfg['active_task_prefixes']
         if self.cfg['newline'] == 'linux':
             self.c_newline = '\n'
         else:
