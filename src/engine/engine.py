@@ -23,29 +23,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
 
-import configparser
 import datetime
-import json
 import logging
 import os
 import re
 import shutil
-import sys
 from dateutil.relativedelta import relativedelta
-from pathlib import Path
-from PyQt5.QtWidgets import QMessageBox
-import engine.prepare_todays_tasks
-
-
-def sort_tasks(tasks, tags_in_sorting_order):
-    """Function docstring."""
-
-    sorted_tasks = []
-    for tag in tags_in_sorting_order:
-        for task in tasks:
-            if tag in task:
-                sorted_tasks.append(task)
-    return sorted_tasks
 
 
 def _read_file(file_path, single_string=False):
@@ -63,7 +46,6 @@ def _read_file(file_path, single_string=False):
             #        numof_lines_to_the_end = idx + 1
             lines = lines[:numof_lines_to_the_end]
     return lines
-
 
 def _write_file(file_path, contents):
     with open(file_path, 'w') as file_path_:
@@ -88,32 +70,96 @@ class Engine:
         self.cfg_portfolio_files = config.cfg_portfolio_files
         self.cfg_active_task_prefixes = config.cfg_active_task_prefixes
 
-    # ~ def setup(self):
-        # ~ """Function docstring."""
+    def _line_is_heading(self, line):
+        if len(line) > 0 and line[0] == self.cfg['heading_prefix']:
+            return True
+        return False
 
-        # ~ self.setup_menu()
-        # ~ self.open_portfolio()
-    
-    # ~ def get_tab(self, path):
-        # ~ """Function docstring."""
+    def _line_is_heading_ttl(self, line):
+        if self._line_is_heading(line) and self.cfg['ttl_heading'] in line:
+            return True
+        return False
 
-        # ~ normalised_path = os.path.normcase(os.path.abspath(path))
-        # ~ for tab in self._view.widgets:
-            # ~ if tab.path:
-                # ~ tab_path = os.path.normcase(os.path.abspath(tab.path))
-                # ~ if tab_path == normalised_path:
-                    # ~ self._view.focus_tab(tab)
-                    # ~ return tab
-        # ~ return self._view.current_tab
+    def _line_is_heading_incoming(self, line):
+        if self._line_is_heading(line) and self.cfg['incoming_heading'] in line:
+            return True
+        return False
 
-    def _valid_task(self, task, recurring=False):
-        if (len(task) == 0
-                or task[0] not in self.cfg_active_task_prefixes
-                or self.cfg['daily_rec_prop_val'] in task):
-            return False
-        if recurring and self.cfg['rec_prop'] not in task:
-            return False
-        return True
+    def _line_is_heading_task_group(self, line):
+        if (self._line_is_heading(line)
+                and not self._line_is_heading_ttl(line)
+                and not self._line_is_heading_ttl(line)):
+            return True
+        return False
+
+    def _line_is_task_basic(self, line):
+        if (len(line) > 0
+                and line[0] in self.cfg_active_task_prefixes
+                and self.cfg['dur_prop'] in line
+                and self.cfg['due_prop'] not in line
+                and self.cfg['rec_prop'] not in line):
+            return True
+        return False
+
+    def _line_is_task_tt(self, line):
+        if (self._line_is_task_basic(line)
+                and line[0] == self.cfg['top_task_prefix']):
+            return True
+        return False
+
+    def _line_is_task_due(self, line):
+        if (len(line) > 0
+                and line[0] == self.cfg['open_task_prefix']
+                and self.cfg['dur_prop'] in line
+                and self.cfg['due_prop'] in line
+                and self.cfg['rec_prop'] not in line):
+            return True
+        return False
+
+    def _line_is_task_daily(self, line):
+        if (len(line) > 0
+                and line[0] == self.cfg['open_task_prefix']
+                and self.cfg['dur_prop'] in line
+                and self.cfg['due_prop'] not in line
+                and self.cfg['daily_rec_prop_val'] in line):
+            return True
+        return False
+
+    def _line_is_task_periodic(self, line):
+        if (len(line) > 0
+                and line[0] == self.cfg['open_task_prefix']
+                and self.cfg['dur_prop'] in line
+                and self.cfg['due_prop'] in line
+                and self.cfg['rec_prop'] in line
+                and self.cfg['daily_rec_prop_val'] not in line):
+            return True
+        return False
+
+    def _line_is_task_shlist(self, line):
+        if (len(line) > 0
+                and line[0] == self.cfg['open_task_prefix']
+                and self.cfg['dur_prop'] in line
+                and self.cfg['shlist_cat'] in line):
+            return True
+        return False
+
+    def _file_is_dtf(self, file_path):
+        # TODO Fix assumption that folder separator is always /
+        file_name_and_ext = file_path.split('/')[-1]
+        file_name = file_name_and_ext.split('.')[0]
+        if re.match(r'\d{8}', file_name):
+            return True
+        return False
+
+    def eight_digit_date(self, day, month, year):
+        edd = str(year)
+        if month < 10:
+            edd += "0"
+        edd += str(month)
+        if day < 10:
+            edd += "0"
+        edd += str(day)
+        return edd
 
     def mark_ordinary_task_done(self, fpath, linum):
 
@@ -124,7 +170,9 @@ class Engine:
         # TODO This should be done when reading the file -- ignore all
         #  trailing blank lines after # THE END #
         ctask = lines[linum]
-        if not self._valid_task(ctask):
+        if not self._file_is_dtf(fpath):
+            return
+        if not self._task_is_valid(ctask):
             return
         del lines[linum]
         now = datetime.datetime.now()
@@ -136,7 +184,6 @@ class Engine:
         contents = "".join(line for line in lines)
         _write_file(fpath, contents)
         self.mark_task_done_at_origin(ctask)
-        return contents
 
     def mark_task_done_at_origin(self, task):
         """Function docstring."""
@@ -174,38 +221,28 @@ class Engine:
             _write_file(fpath_found, contents)
         return
 
-    def mark_task_for_rescheduling(self, fpath, linen, mark_rescheduled_periodic_task=False):
+    def mark_task_for_rescheduling(self, file_path, line_num,
+                                   mark_as_rescheduled=False):
         """Function docstring."""
 
         now = datetime.datetime.now()
-        tab = self._view.current_tab
-        firstvl = tab.firstVisibleLine()
-        lines = tab.text().split(self.c_newline)
-        if len(lines[-1]) == 0:
-            lines = lines[:-1]
-        rown = tab.getCursorPosition()[0]
-        ctask = lines[rown]
-        del lines[rown]
-        ntask = self.cfg['for_rescheduling_task_prefix']
-        if mark_rescheduled_periodic_task:
-            ntask = self.cfg['rescheduled_periodic_task_prefix']
-        ntask += (self.cfg_space
-                  + now.strftime("%Y-%m-%d")
-                  + self.cfg_space
-                  + ctask)
-        lines.append(ntask)
-        contents = ""
-        for task in lines:
-            contents += task + self.c_newline
-        contents = contents.rstrip(self.c_newline)
-        tab.SendScintilla(tab.SCI_SETTEXT,
-                          contents.encode(self.cfg['encoding']))
-        # TODO Consider adding an option
-        # to determine whether the user wants this done
-        # self.analyse_tasks()
-        # self.schedule_tasks()
-        tab.setFirstVisibleLine(firstvl)
-        tab.setCursorPosition(rown, 0)
+        lines = _read_file(file_path)
+        selected_task = lines[line_num]
+        # TODO Check that we're coming from DTF!
+        if not self._task_is_valid(selected_task):
+            return
+        del lines[line_num]
+        marked_task = self.cfg['for_rescheduling_task_prefix']
+        if mark_as_rescheduled:
+             marked_task = self.cfg['rescheduled_periodic_task_prefix']
+        marked_task += (self.cfg_space
+                        + now.strftime("%Y-%m-%d")
+                        + self.cfg_space
+                        + selected_task)
+        lines.append(marked_task)
+        contents = "".join(line for line in lines)
+        _write_file(file_path, contents)
+        return contents
 
     def reschedule_periodic_task(self, file_path, line_num):
         """Function docstring."""
@@ -216,19 +253,160 @@ class Engine:
         selected_task = re.sub(r'\d{2}:\d{2}' + self.cfg_space,
                                "",
                                selected_task)
-        if not self._valid_task(selected_task, recurring=True):
+        if not self._task_is_valid(selected_task, recurring=True):
             return
         self.mark_done_at_origin(task)
-        self.mark_task_for_rescheduling(mark_rescheduled_periodic_task=True)
+        self.mark_task_for_rescheduling(mark_as_rescheduled=True)
 
         # TODO Consider adding an option
         # to determine whether the user wants this done
-        # self.analyse_tasks()
-        # self.schedule_tasks()
+        # self._analyse_tasks()
+        # self._schedule_tasks()
         return
 
-    def move_daily_tasks_file(self):
-        """Move the current daily tasks file to its archive dir."""
+    def toggle_tt(self, file_path, line_num):
+        """Docstring."""
+
+        lines = _read_file(file_path)
+        updated_lines = []
+        for idx, line in enumerate(lines):
+            if idx == line_num and self._line_is_task_basic(line):
+                if self._line_is_task_tt(line):
+                    updated_lines.append(self.cfg['open_task_prefix']
+                                         + lines[idx][1:])
+                else:
+                    updated_lines.append(self.cfg['top_task_prefix']
+                                         + lines[idx][1:])
+            else:
+                updated_lines.append(lines[idx])
+        contents = "".join(line for line in updated_lines)
+        _write_file(file_path, contents)
+
+    def generate_ttl(self, file_path):
+        """Generate Top Tasks List (TTL)"""
+
+        lines = _read_file(file_path)
+        processed_lines = []
+        below_incoming_header = False
+        below_task_group_header = False
+        ttl_tasks = [self.cfg['heading_prefix'] + self.cfg_space + self.cfg[
+            'ttl_heading'], self.c_newline, self.c_newline]
+        for idx, line in enumerate(lines):
+            if below_incoming_header:
+                processed_lines.append(line)
+            if below_task_group_header and self._line_is_task_tt(line):
+                ttl_tasks.append(line)
+            if self._line_is_heading_incoming(line):
+                below_incoming_header = True
+                processed_lines.append(line)
+            if self._line_is_heading_task_group(line):
+                below_task_group_header = True
+        processed_lines = ttl_tasks + [self.c_newline] + processed_lines
+        contents = "".join(line for line in processed_lines)
+        _write_file(file_path, contents)
+
+    def generate_ttls(self):
+        for file_path in self.cfg_portfolio_files:
+            self.generate_ttl(file_path)
+
+    def extract_booked(self):
+        due_tasks = []
+        for file_path in self.cfg_portfolio_files:
+            lines = _read_file(file_path)
+            for line in lines:
+                if self._line_is_task_due(line):
+                    due_tasks.append(line)
+        contents = "".join(line for line in due_tasks)
+        _write_file(self.cfg['booked_file'], contents)
+
+    def extract_daily(self):
+        daily_tasks = []
+        for file_path in self.cfg_portfolio_files:
+            lines = _read_file(file_path)
+            for line in lines:
+                if self._line_is_task_daily(line):
+                    daily_tasks.append(line)
+        contents = "".join(line for line in daily_tasks)
+        _write_file(self.cfg['daily_file'], contents)
+
+    def extract_periodic(self):
+        periodic_tasks = []
+        for file_path in self.cfg_portfolio_files:
+            lines = _read_file(file_path)
+            for line in lines:
+                if self._line_is_task_periodic(line):
+                    periodic_tasks.append(line)
+        contents = "".join(line for line in periodic_tasks)
+        _write_file(self.cfg['periodic_file'], contents)
+
+    def extract_shlist(self):
+        shlist_tasks = []
+        for file_path in self.cfg_portfolio_files:
+            lines = _read_file(file_path)
+            for line in lines:
+                if self._line_is_task_shlist(line):
+                    shlist_tasks.append(line)
+        contents = "".join(line for line in shlist_tasks)
+        _write_file(self.cfg['shlist_file'], contents)
+
+    def extract_auxiliaries(self):
+        self.extract_booked()
+        self.extract_daily()
+        self.extract_periodic()
+        self.extract_shlist()
+
+    def collect_tasks_for_date(self, day, month, year):
+        tasks = []
+        day_for_planning = datetime.datetime(year, month, day)
+        # Add daily tasks
+        daily_tasks = _read_file(self.cfg['daily_file'])
+        for task in daily_tasks:
+            tasks.append(task)
+        # Add booked (due) tasks
+        due_tasks = _read_file(self.cfg['booked_file'])
+        for task in due_tasks:
+            if self.get_task_due_date(task) <= day_for_planning:
+                tasks.append(task)
+        # Add periodic tasks
+        periodic_tasks = _read_file(self.cfg['periodic_file'])
+        for task in periodic_tasks:
+            if self.get_task_due_date(task) <= day_for_planning:
+                tasks.append(task)
+        # Add top tasks
+        for file_path in self.cfg_portfolio_files:
+            lines = _read_file(file_path)
+            for line in lines:
+                if self._line_is_task_tt(line):
+                    tasks.append(line)
+        return tasks
+
+    def order_tasks_for_date(self, tasks):
+        ordered_tasks = []
+        already_processed_tasks = []
+        for token in self.cfg['tokens_in_sorting_order'].split('\n'):
+            for task in tasks:
+                if token in task and task not in already_processed_tasks:
+                    ordered_tasks.append(task)
+                    already_processed_tasks.append(task)
+        return ordered_tasks
+
+    def prepare_day_plan(self, day, month, year):
+        self.generate_ttls()
+        self.extract_auxiliaries()
+        tasks_for_date = self.collect_tasks_for_date(day, month, year)
+        ordered_tasks = self.order_tasks_for_date(tasks_for_date)
+        with open(self.cfg['today_file'], 'w') as today_file_:
+            print("# Daily task list", file=today_file_)
+            for task in ordered_tasks:
+                print(task[:-1], file=today_file_)
+            print("# Tasks DONE", file=today_file_)
+        file_name = self.eight_digit_date(day, month, year)
+        file_name_n_ext = file_name + self.cfg['atlas_files_extension']
+        shutil.copyfile(self.cfg['today_file'],
+                        self.cfg['portfolio_base_dir'] + file_name_n_ext)
+
+    def _move_daily_tasks_file(self):
+        """In development. Do not use."""
 
         ctab = self._view.current_tab
         if not self.running_from_daily_tasks_file(ctab):
@@ -240,51 +418,8 @@ class Engine:
             self.cfg['portfolio_base_dir'] + fnae,
             self.cfg['daily_files_archive_dir'] + fnae)
 
-
-#        tab = self._view.current_tab
-#       if not self.running_from_daily_tasks_file(tab):
-#           return
-#       current_tab_index = self._view.tabs.indexOf(tab)
-#       first_visible_line = tab.firstVisibleLine()
-#       row = tab.getCursorPosition()[0]
-#       current_task = tab.text(row)
-#       current_task = re.sub(r'\d{2}:\d{2}' + self.cfg['space'][1], "",
-#                             current_task)
-#       # If it's a blank line
-#       if (current_task
-#               and current_task[0] not in self.cfg_active_task_prefixes):
-#           return
-#       contents = self.mark_ordinary_task_done(tab)
-#       tab.SendScintilla(tab.SCI_SETTEXT, contents.encode(self.cfg['encoding']))
-#       # TODO Consider adding an option
-#       # to determine whether the user wants this done
-#       # self.analyse_tasks()
-#       # self.schedule_tasks()
-#       self.mark_done_at_origin(current_task)
-#       self._view.tabs.setCurrentIndex(current_tab_index)
-#       tab.setFirstVisibleLine(first_visible_line)
-#       tab.setCursorPosition(row, 0)
-#        tab = self._view.current_tab
-
-    def add_adhoc_task(self):
-        """Add an ad hoc (incoming) task to an LA file or a DT file.
-
-        Add an ad hoc (incoming) task. There are two main situations: adding an
-        ad hoc task to a life area (LA) file, and adding an add hoc task to a
-        daily tasks (DT) file. Different values for `extra_line_before` and
-        `extra_line_after` are given in those two cases. Then there is also the
-        case of adding an already finished task. A finished task is added at
-        the end of a daily tasks file (with `extra_line_before` and
-        `extra_line_after` suitably adjusted), while it is not added to a
-        portfolio file.
-
-        Notes
-        -----
-        Consider splitting this method into two: one for adding the ad hoc task
-        to a life area file, and one for adding an ad hoc task to a daily tasks
-        file, since the logic below is getting a bit cumbersome.
-
-        """
+    def _add_adhoc_task(self):
+        """In development. Do not use."""
 
         result = self._view.show_add_adhoc_task()
         current_tab = self._view.current_tab
@@ -341,8 +476,8 @@ class Engine:
                 current_tab.SCI_SETTEXT, contents.encode(self.encoding))
             # self._view.save_file(current_tab)
 
-    def tag_current_line(self):
-        """Function docstring."""
+    def _tag_current_line(self):
+        """In development. Do not use."""
 
         current_tab = self._view.current_tab
         first_visible_line = current_tab.firstVisibleLine()
@@ -370,123 +505,8 @@ class Engine:
         current_tab.setCursorPosition(row, col)
         self._view.save_file(current_tab)
 
-    def toggle_tt(self):
-        """Function docstring."""
-
-        tab = self._view.current_tab
-        first_visible_line = tab.firstVisibleLine()
-        lines = tab.text().split(self.c_newline)
-        cursor_position = tab.getCursorPosition()
-        row = cursor_position[0]
-        col = cursor_position[1]
-        new_lines = []
-        for i, _ in enumerate(lines):
-            if (i == row
-                    and lines[i]
-                    and self.cfg['due_prop'] not in lines[i]
-                    and self.cfg['rec_prop'] not in lines[i]):
-                if lines[i][0] == self.cfg['top_task_prefix']:
-                    new_lines.append(self.cfg['open_task_prefix']
-                                     + lines[i][1:])
-                else:
-                    new_lines.append(self.cfg['top_task_prefix']
-                                     + lines[i][1:])
-            else:
-                new_lines.append(lines[i])
-        contents = ""
-        for i, _ in enumerate(new_lines):
-            contents += new_lines[i] + self.c_newline
-        contents = contents.rstrip(self.c_newline)
-        tab.SendScintilla(
-            tab.SCI_SETTEXT, contents.encode(ENCODING))
-        tab.setFirstVisibleLine(first_visible_line)
-        tab.setCursorPosition(row, col - 1)
-        self._view.save_file(tab)
-
-    def generate_ttl(self, tab=None):
-        """Generate Top Tasks List (TTL) for the current file (tab)."""
-
-        if not tab:
-            tab = self._view.current_tab
-        tasks_aux = tab.text().split(self.c_newline)
-        start = -1
-        ttl_tasks = []
-        for i, _ in enumerate(tasks_aux):
-            if tasks_aux[i]:
-                if start > -1:
-                    if tasks_aux[i][0] == self.cfg['top_task_prefix']:
-                        ttl_tasks.append(tasks_aux[i])
-                elif (tasks_aux[i][0] == self.cfg['heading_prefix']
-                        and self.cfg['ttl_heading'] not in tasks_aux[i]):
-                    start = i
-        tasks = [self.cfg['heading_prefix'] + self.cfg_space
-                 + self.cfg['ttl_heading'], '']
-        for ttl_task in ttl_tasks:
-            tasks.append(ttl_task)
-        tasks.append('')
-        for i in range(start, len(tasks_aux)):
-            tasks.append(tasks_aux[i])
-        contents = ""
-        for i, _ in enumerate(tasks):
-            contents += tasks[i] + self.c_newline
-        contents = contents.rstrip(self.c_newline)
-        tab.SendScintilla(tab.SCI_SETTEXT, contents.encode(self.cfg['encoding']))
-        # self._view.save_file(tab.path, tab)
-
-    def generate_ttls(self):
-        """Generate Top Tasks Lists (TTLs) for all portfolio files."""
-
-        for widget in self._view.widgets:
-            current_tab_index = self._view.tabs.indexOf(widget)
-            self._view.tabs.setCurrentIndex(current_tab_index)
-            if widget.path in self.cfg_portfolio_files:
-                self.generate_ttl(widget)
-
-    def extract_auxiliaries(self):
-        """Function docstring."""
-
-        self.extract_booked()
-        self.extract_daily()
-        self.extract_periodic()
-        self.extract_shlist()
-
-    def prepare_day_plan(self):
-        """Function docstring."""
-
-        self.generate_ttls()
-        self.extract_auxiliaries()
-        danas = datetime.datetime.now()
-        result = self._view.show_prepare_day_plan(
-            str(danas.day), str(danas.month), str(danas.year))
-        if result:
-            target_day, target_month, target_year = result
-            engine.prepare_todays_tasks.prepare_todays_tasks(
-                target_day, target_month, target_year,
-                self.cfg['atlas_config_file'])
-        else:
-            return
-        file_name = str(target_year)
-        if target_month < 10:
-            file_name += "0"
-        file_name += str(target_month)
-        if target_day < 10:
-            file_name += "0"
-        file_name += str(target_day)
-        file_name += self.cfg['atlas_files_extension']
-        # Close tab with the same name if it is alreday copen
-        idx = -1
-        for i in range(self._view.tab_count):
-            if (self._view.tabs.widget(i).path
-                    == self.cfg['portfolio_base_dir'] + file_name):
-                idx = i
-        if idx > -1:
-            self._view.tabs.removeTab(idx)
-        shutil.copyfile(self.cfg['today_file'],
-                        self.cfg['portfolio_base_dir'] + file_name)
-        # self.open_file(self.cfg['portfolio_base_dir'] + file_name)
-
-    def analyse_tasks(self):
-        """Function docstring."""
+    def _analyse_tasks(self):
+        """In development. Do not use."""
 
         tab = self._view.current_tab
         tasks_aux = tab.text().split(self.c_newline)
@@ -537,8 +557,8 @@ class Engine:
         contents = contents.rstrip(self.c_newline)
         tab.SendScintilla(tab.SCI_SETTEXT, contents.encode(self.encoding))
 
-    def schedule_tasks(self):
-        """Function docstring."""
+    def _schedule_tasks(self):
+        """In development. Do not use."""
 
         tab = self._view.current_tab
         tasks = tab.text().split(self.c_newline)
@@ -567,8 +587,8 @@ class Engine:
         contents = contents.rstrip(self.c_newline)
         tab.SendScintilla(tab.SCI_SETTEXT, contents.encode(self.encoding))
 
-    def extract_earned_time(self):
-        """Function docstring."""
+    def _extract_earned_time(self):
+        """In development. Do not use."""
 
         ctab = self._view.current_tab
         file_name = os.path.basename(ctab.path).split('.')[0]
@@ -585,10 +605,10 @@ class Engine:
         with open(self.cfg['earned_times_file'], 'a') as file_:
             file_.write(extract)
 
-    def log_progress(self):
-        """Function docstring."""
+    def _log_progress(self):
+        """In development. Do not use."""
 
-        log_entry = self.format_log_entry(self._view.show_log_progress())
+        log_entry = self._format_log_entry(self._view.show_log_progress())
         if log_entry:
             log_tab_index = -1
             for i in range(self._view.tab_count):
@@ -649,8 +669,8 @@ class Engine:
         else:
             return
 
-    def back_up(self):
-        """Back up."""
+    def _back_up(self):
+        """In development. Do not use."""
 
         now = datetime.datetime.now()
         try:
@@ -662,8 +682,8 @@ class Engine:
         except OSError as ex:
             logging.error("Directory not copied. Error: %s", ex)
 
-    def sort_periodic_tasks(self):
-        """Sort lines in the current tab."""
+    def _sort_periodic_tasks(self):
+        """In development. Do not use."""
 
         tab = self._view.current_tab
         first_visible_line = tab.firstVisibleLine()
@@ -676,136 +696,8 @@ class Engine:
         tab.setFirstVisibleLine(first_visible_line)
         tab.setCursorPosition(0, 0)
 
-    def extract_daily(self):
-        """Extract to file tasks with the daily-periodic property defined."""
-
-        current_tab = self._view.current_tab
-        current_tab_index = self._view.tabs.indexOf(current_tab)
-        daily_tasks = []
-        daily_tab_index = -1
-        for widget in self._view.widgets:
-            if widget.path in self.cfg_portfolio_files:
-                lines = widget.text().split(self.c_newline)
-                for line in lines:
-                    if (self.cfg['daily_rec_prop_val'] in line
-                            and line[0] in self.cfg_active_task_prefixes):
-                        daily_tasks.append(line)
-        for i in range(self._view.tab_count):
-            if self._view.tabs.widget(i).path == self.cfg['daily_file']:
-                daily_tab_index = i
-        contents = ""
-        for i, _ in enumerate(daily_tasks):
-            contents += daily_tasks[i] + self.c_newline
-        contents = contents.rstrip(self.c_newline)
-        self._view.tabs.setCurrentIndex(daily_tab_index)
-        daily_tab = self._view.tabs.widget(daily_tab_index)
-        daily_tab.SendScintilla(daily_tab.SCI_SETTEXT,
-                                contents.encode(self.cfg['encoding']))
-        # self.save_file(daily_tab.path, daily_tab)
-        self._view.tabs.setCurrentIndex(current_tab_index)
-
-    def extract_booked(self):
-        """Extract to file tasks with the due-date property defined."""
-
-        current_tab = self._view.current_tab
-        current_tab_index = self._view.tabs.indexOf(current_tab)
-        booked_tasks = []
-        booked_tab_index = -1
-        for widget in self._view.widgets:
-            if widget.path in self.cfg_portfolio_files:
-                lines = widget.text().split(self.c_newline)
-                for line in lines:
-                    if (self.cfg['due_prop'] in line
-                            and self.cfg['rec_prop'] not in line
-                            and line[0] in self.cfg_active_task_prefixes):
-                        booked_tasks.append(line)
-        for i in range(self._view.tab_count):
-            if self._view.tabs.widget(i).path == self.cfg['booked_file']:
-                booked_tab_index = i
-        booked_tab = self._view.tabs.widget(booked_tab_index)
-        contents = ""
-        for i, _ in enumerate(booked_tasks):
-            contents += booked_tasks[i] + self.c_newline
-        contents = contents.rstrip(self.c_newline)
-        self._view.tabs.setCurrentIndex(booked_tab_index)
-        booked_tab = self._view.tabs.widget(booked_tab_index)
-        booked_tab.SendScintilla(booked_tab.SCI_SETTEXT,
-                                 contents.encode(self.cfg['encoding']))
-        # self.save_file(booked_tab.path, booked_tab)
-        self._view.tabs.setCurrentIndex(current_tab_index)
-
-    def extract_periodic(self):
-        """Extract to file tasks with the periodic property defined."""
-
-        current_tab = self._view.current_tab
-        current_tab_index = self._view.tabs.indexOf(current_tab)
-        periodic_tasks = []
-        periodic_tab_index = -1
-        for widget in self._view.widgets:
-            if widget.path in self.cfg_portfolio_files:
-                lines = widget.text().split(self.c_newline)
-                for line in lines:
-                    if (self.cfg['rec_prop'] in line
-                            and self.cfg['daily_rec_prop_val'] not in line
-                            and line[0] in self.cfg_active_task_prefixes):
-                        periodic_tasks.append(line)
-        for i in range(self._view.tab_count):
-            if self._view.tabs.widget(i).path == self.cfg['periodic_file']:
-                periodic_tab_index = i
-        periodic_tab = self._view.tabs.widget(periodic_tab_index)
-        contents = ""
-        for i, _ in enumerate(periodic_tasks):
-            contents += periodic_tasks[i] + self.c_newline
-        contents = contents.rstrip(self.c_newline)
-        self._view.tabs.setCurrentIndex(periodic_tab_index)
-        periodic_tab = self._view.tabs.widget(periodic_tab_index)
-        periodic_tab.SendScintilla(periodic_tab.SCI_SETTEXT,
-                                   contents.encode(self.cfg['encoding']))
-        # self.save_file(periodic_tab.path, periodic_tab)
-        self._view.tabs.setCurrentIndex(current_tab_index)
-
-    def extract_shlist(self):
-        """Extract to file tasks with the shopping list category defined."""
-
-        current_tab = self._view.current_tab
-        current_tab_index = self._view.tabs.indexOf(current_tab)
-        shlist_tasks = []
-        shlist_tab_index = -1
-        for widget in self._view.widgets:
-            if widget.path in self.cfg_portfolio_files:
-                lines = widget.text().split(self.c_newline)
-                for line in lines:
-                    if (self.cfg['shlist_cat'] in line
-                            and line[0] in self.cfg_active_task_prefixes):
-                        shlist_tasks.append(line)
-        for i in range(self._view.tab_count):
-            if self._view.tabs.widget(i).path == self.cfg['shlist_file']:
-                shlist_tab_index = i
-        print(shlist_tab_index)
-        shlist_tab = self._view.tabs.widget(shlist_tab_index)
-        contents = ""
-        for i, _ in enumerate(shlist_tasks):
-            contents += shlist_tasks[i] + self.c_newline
-        contents = contents.rstrip(self.c_newline)
-        self._view.tabs.setCurrentIndex(shlist_tab_index)
-        shlist_tab = self._view.tabs.widget(shlist_tab_index)
-        shlist_tab.SendScintilla(shlist_tab.SCI_SETTEXT,
-                                 contents.encode(self.cfg['encoding']))
-        # self._view.save_file(shlist_tab.path, shlist_tab)
-        self._view.tabs.setCurrentIndex(current_tab_index)
-
-    # Utilities
-
-    def format_log_entry(self, entry):
-        """Format log entry so that each line does not exceed certain length.
-
-        Maximum line length is defined in self.LOG_LINE_LENGTH.
-
-        .. warning:: Currently assumes len(entry) is always < 160.
-
-        :param entry string: log entry before formatting
-        :returns string: log entry after formatting
-        """
+    def _format_log_entry(self, entry):
+        """In development. Do not use."""
 
         if entry and len(entry) > self.cfg.getint('log_line_length'):
             entry = (entry[:self.cfg.getint('log_line_length')]
@@ -836,15 +728,6 @@ class Engine:
         return int(duration)
 
     def get_task_text(self, task):
-        """Get task text without properties, tags, categories, and symbols.
-
-        Get just the task text (without properties, tags, categories, prefixes,
-        symbols, scheduling times, and the like) from full task definition.
-
-        :param task string: task definition
-        :returns string: task text
-        """
-
         words = task.split(self.cfg_space)
         task_text = ''
         for word in words:
@@ -856,6 +739,14 @@ class Engine:
             else:
                 task_text += word + self.cfg_space
         return task_text.rstrip(self.cfg_space)
+
+    def get_task_due_date(self, task):
+        words = task.split(self.cfg_space)
+        for word in words:
+            if self.cfg['due_prop'] in word:
+                datum = word.split(self.cfg['property_separator'])[1]
+                year, month, day = datum.split(self.cfg['date_separator'])
+        return datetime.datetime(int(year), int(month), int(day))
 
     def running_from_daily_tasks_file(self, tab):
         """Check if the command is issued while a daily tasks tab is active.
@@ -954,19 +845,6 @@ class Engine:
                 or self.cfg['rec_prop'] in word):
             return True
         return False
-
-    # ~ def save_session_settings(self):
-        # ~ x = self._view.x()
-        # ~ y = self._view.y()
-        # ~ w = self._view.width()
-        # ~ h = self._view.height()
-        # ~ self.config.set('USER', 'x_coord', '10')
-        # ~ self.config.set('USER', 'y_coord', '10')
-        # ~ self.config.set('USER', 'width_ratio', '0.6')
-        # ~ self.config.set('USER', 'height_ratio', '0.6')
-        # ~ # TODO Rename settings_file to config_file
-        # ~ with open(self.config_file, 'w') as config_file:
-            # ~ self.config.write(config_file, False)
 
     def word_has_active_task_prefix(self, word):
         if (len(word) == 1

@@ -112,7 +112,7 @@ class Model:
         file, and only on tasks that have an `open_task_prefix`. It calls
         `mark_ordinary_task_done()` to do the actual work. Special care is
         taken to preserve the view. After marking a task as done, it calls
-        `analyse_tasks()` and `schedule_tasks()` to refresh the information.
+        `_analyse_tasks()` and `_schedule_tasks()` to refresh the information.
 
         Notes
         -----
@@ -139,8 +139,8 @@ class Model:
         tab.SendScintilla(tab.SCI_SETTEXT, contents.encode(self.cfg['encoding']))
         # TODO Consider adding an option
         # to determine whether the user wants this done
-        # self.analyse_tasks()
-        # self.schedule_tasks()
+        # self._analyse_tasks()
+        # self._schedule_tasks()
         self.mark_done_at_origin(current_task)
         self._view.tabs.setCurrentIndex(current_tab_index)
         tab.setFirstVisibleLine(first_visible_line)
@@ -239,8 +239,8 @@ class Model:
         tab.SendScintilla(tab.SCI_SETTEXT, contents.encode(self.cfg['encoding']))
         # TODO Consider adding an option
         # to determine whether the user wants this done
-        # self.analyse_tasks()
-        # self.schedule_tasks()
+        # self._analyse_tasks()
+        # self._schedule_tasks()
         tab.setFirstVisibleLine(first_visible_line)
         tab.setCursorPosition(row, 0)
 
@@ -266,8 +266,8 @@ class Model:
         self.mark_task_for_rescheduling(True)
         # TODO Consider adding an option
         # to determine whether the user wants this done
-        # self.analyse_tasks()
-        # self.schedule_tasks()
+        # self._analyse_tasks()
+        # self._schedule_tasks()
         return
 
     def add_adhoc_task(self):

@@ -1,8 +1,3 @@
-# Tasks proposed for 2020-02-02
+# TTL #
 
 
-- Ordinary task dur:5 +la1
-- due:2020-01-01 Relative periodic task dur:10 rec:7d +la1
-- due:2020-01-01 Absolute periodic task dur:15 rec:+1m +la1
-
-# Tasks DONE on 2020-02-02

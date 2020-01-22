@@ -26,6 +26,16 @@ def screen_size():
     screen = QDesktopWidget().screenGeometry()
     return screen.width(), screen.height()
 
+def eight_digit_date(day, month, year):
+    # TODO Change over to f-strings
+    edd = str(year)
+    if month < 10:
+        edd += "0"
+    edd += str(month)
+    if day < 10:
+        edd += "0"
+    edd += str(day)
+    return edd
 
 class TopLevelWindow(QMainWindow):
     """Docstring."""
@@ -149,7 +159,7 @@ class TopLevelWindow(QMainWindow):
         move_daily_tasks_file = QAction("Move daily tasks file", self)
         move_daily_tasks_file.setShortcut("Alt+M")
         move_menu.addAction(move_daily_tasks_file)
-        actions['move_daily_tasks_file'] = move_daily_tasks_file
+        actions['_move_daily_tasks_file'] = move_daily_tasks_file
 
         # Task
         task_menu = menu_bar.addMenu("Task")
@@ -173,12 +183,12 @@ class TopLevelWindow(QMainWindow):
         add_adhoc_task = QAction("Add ad hoc task", self)
         add_adhoc_task.setShortcut("Alt+I")
         task_menu.addAction(add_adhoc_task)
-        actions['add_adhoc_task'] = add_adhoc_task
+        actions['_add_adhoc_task'] = add_adhoc_task
 
         tag_current_line = QAction("Tag current line", self)
         tag_current_line.setShortcut("Alt+T")
         task_menu.addAction(tag_current_line)
-        actions['tag_current_line'] = tag_current_line
+        actions['_tag_current_line'] = tag_current_line
 
         toggle_tt = QAction("Toggle TT", self)
         toggle_tt.setShortcut("Alt+G")
@@ -211,17 +221,17 @@ class TopLevelWindow(QMainWindow):
         analyse_tasks = QAction("Analyse tasks", self)
         analyse_tasks.setShortcut("Alt+Y")
         lists_menu.addAction(analyse_tasks)
-        actions['analyse_tasks'] = analyse_tasks
+        actions['_analyse_tasks'] = analyse_tasks
 
         schedule_tasks = QAction("Schedule tasks", self)
         schedule_tasks.setShortcut("Alt+S")
         lists_menu.addAction(schedule_tasks)
-        actions['schedule_tasks'] = schedule_tasks
+        actions['_schedule_tasks'] = schedule_tasks
 
         extract_earned_time = QAction("Extract earned time", self)
         extract_earned_time.setShortcut("Alt+X")
         lists_menu.addAction(extract_earned_time)
-        actions['extract_earned_time'] = extract_earned_time
+        actions['_extract_earned_time'] = extract_earned_time
 
         # Logs
         logs_menu = menu_bar.addMenu("Logs")
@@ -229,17 +239,12 @@ class TopLevelWindow(QMainWindow):
         log_progress = QAction("Log progress", self)
         log_progress.setShortcut("Alt+L")
         logs_menu.addAction(log_progress)
-        actions['log_progress'] = log_progress
-
-        # ~ log_expense = QAction("Log expense", self)
-        # ~ log_expense.setShortcut("Alt+E")
-        # ~ logs_menu.addAction(log_expense)
-        # ~ actions['log_expense'] = log_expense
+        actions['_log_progress'] = log_progress
 
         back_up = QAction("Back up portfolio", self)
         back_up.setShortcut("Alt+B")
         logs_menu.addAction(back_up)
-        actions['back_up'] = back_up
+        actions['_back_up'] = back_up
 
         # Other
         other_menu = menu_bar.addMenu("Other")
@@ -247,7 +252,7 @@ class TopLevelWindow(QMainWindow):
         sort_periodic_tasks = QAction("Sort periodic tasks", self)
         sort_periodic_tasks.setShortcut("Alt+Q")
         other_menu.addAction(sort_periodic_tasks)
-        actions['sort_periodic_tasks'] = sort_periodic_tasks
+        actions['_sort_periodic_tasks'] = sort_periodic_tasks
 
         extract_daily = QAction("Extract daily", self)
         other_menu.addAction(extract_daily)
@@ -611,7 +616,7 @@ class TopLevelWindow(QMainWindow):
         file, and only on tasks that have an `open_task_prefix`. It calls
         `mark_ordinary_task_done()` to do the actual work. Special care is
         taken to preserve the view. After marking a task as done, it calls
-        `analyse_tasks()` and `schedule_tasks()` to refresh the information.
+        `_analyse_tasks()` and `_schedule_tasks()` to refresh the information.
 
         Notes
         -----
@@ -636,6 +641,109 @@ class TopLevelWindow(QMainWindow):
         self.portfolio_reload_currently_open_files()
         ctab.setFirstVisibleLine(fv_line)
         ctab.setCursorPosition(crow, 0)
+
+    def mark_task_for_rescheduling(self):
+        """Docstring."""
+
+        ctab = self.current_tab
+        self.file_save_all()
+        if not self._running_from_daily_tasks_file(ctab):
+            return
+        ctab_idx = self.tabs.indexOf(ctab)
+        fv_line = ctab.firstVisibleLine()
+        crow = ctab.getCursorPosition()[0]
+        ctask = ctab.text(crow)
+        ctask = re.sub(r'\d{2}:\d{2}' + self.c_space, "", ctask)
+        if (ctask and ctask[0] not in self.c_active_task_prefixes):
+            return
+        self._engine.mark_task_for_rescheduling(ctab.path, crow)
+        self.portfolio_reload_currently_open_files()
+        ctab.setFirstVisibleLine(fv_line)
+        ctab.setCursorPosition(crow, 0)
+
+    def toggle_tt(self):
+        # TODO Change over current_tab to selected_tab
+        selected_tab = self.current_tab
+        selected_row = selected_tab.getCursorPosition()[0]
+        self.file_save_all()
+        selected_tab_idx = self.tabs.indexOf(selected_tab)
+        first_visible_line = selected_tab.firstVisibleLine()
+        selected_task = selected_tab.text(selected_row)
+        selected_task = re.sub(r'\d{2}:\d{2}' + self.c_space, "", selected_task)
+        self._engine.toggle_tt(selected_tab.path, selected_row)
+        self.portfolio_reload_currently_open_files()
+        self.tabs.setCurrentIndex(selected_tab_idx)
+        selected_tab.setFirstVisibleLine(first_visible_line)
+        selected_tab.setCursorPosition(selected_row, 0)
+
+    def generate_ttl(self):
+        selected_tab = self.current_tab
+        selected_row = selected_tab.getCursorPosition()[0]
+        self.file_save_all()
+        selected_tab_idx = self.tabs.indexOf(selected_tab)
+        first_visible_line = selected_tab.firstVisibleLine()
+        selected_task = selected_tab.text(selected_row)
+        self._engine.generate_ttl(selected_tab.path)
+        self.portfolio_reload_currently_open_files()
+        self.tabs.setCurrentIndex(selected_tab_idx)
+        selected_tab.setFirstVisibleLine(first_visible_line)
+        selected_tab.setCursorPosition(selected_row, 0)
+
+    def generate_ttls(self):
+        selected_tab = self.current_tab
+        selected_row = selected_tab.getCursorPosition()[0]
+        self.file_save_all()
+        selected_tab_idx = self.tabs.indexOf(selected_tab)
+        first_visible_line = selected_tab.firstVisibleLine()
+        selected_task = selected_tab.text(selected_row)
+        self._engine.generate_ttls()
+        self.portfolio_reload_currently_open_files()
+        self.tabs.setCurrentIndex(selected_tab_idx)
+        selected_tab.setFirstVisibleLine(first_visible_line)
+        selected_tab.setCursorPosition(selected_row, 0)
+
+    def extract_booked(self):
+        selected_tab = self.current_tab
+        selected_row = selected_tab.getCursorPosition()[0]
+        self.file_save_all()
+        selected_tab_idx = self.tabs.indexOf(selected_tab)
+        first_visible_line = selected_tab.firstVisibleLine()
+        selected_task = selected_tab.text(selected_row)
+        self._engine.extract_booked()
+        self.portfolio_reload_currently_open_files()
+        self.tabs.setCurrentIndex(selected_tab_idx)
+        selected_tab.setFirstVisibleLine(first_visible_line)
+        selected_tab.setCursorPosition(selected_row, 0)
+
+    def extract_auxiliaries(self):
+        selected_tab = self.current_tab
+        selected_row = selected_tab.getCursorPosition()[0]
+        self.file_save_all()
+        selected_tab_idx = self.tabs.indexOf(selected_tab)
+        first_visible_line = selected_tab.firstVisibleLine()
+        selected_task = selected_tab.text(selected_row)
+        self._engine.extract_auxiliaries()
+        self.portfolio_reload_currently_open_files()
+        self.tabs.setCurrentIndex(selected_tab_idx)
+        selected_tab.setFirstVisibleLine(first_visible_line)
+        selected_tab.setCursorPosition(selected_row, 0)
+
+    def prepare_day_plan(self):
+        today = datetime.datetime.now()
+        day, month, year = self.show_prepare_day_plan(str(today.day),
+                                                      str(today.month),
+                                                      str(today.year))
+        file_name = eight_digit_date(day, month, year)
+        file_name_n_ext = file_name + self.cfg['atlas_files_extension']
+        dtf_open = False
+        for idx in range(self.tab_count):
+            if (self.tabs.widget(idx).path
+                    == self.cfg['portfolio_base_dir'] + file_name_n_ext):
+                dtf_open = True
+        if dtf_open:
+            self.tabs.removeTab(idx)
+        self._engine.prepare_day_plan(day, month, year)
+        self.file_open(self.cfg['portfolio_base_dir'] + file_name_n_ext)
 
     def show_message(self, message, information=None, icon=None):
         """Docstring."""

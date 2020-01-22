@@ -14,7 +14,7 @@ def prepare_todays_tasks(day, month, year, config_file):
     config.read(config_file)
     cfg = config['USER']
 
-    portfolio_files = cfg['cfg_portfolio_files'].split('\n')
+    portfolio_files = cfg['portfolio_files'].split('\n')
     daily_file = cfg['daily_file']
     booked_file = cfg['booked_file']
     periodic_file = cfg['periodic_file']
