@@ -18,9 +18,9 @@ class ConfigParserTest(unittest.TestCase):
     def test_portfolio_base_dir(self):
         self.assertEqual(self.js.settings['portfolio_base_dir'], self.cfg['portfolio_base_dir'])
  
-    # portfolio_files
+    # cfg_portfolio_files
     def test_portfolio_files(self):
-        self.assertEqual(self.js.settings['portfolio_files'], self.cfg['portfolio_files'].split('\n'))
+        self.assertEqual(self.js.settings['cfg_portfolio_files'], self.cfg['cfg_portfolio_files'].split('\n'))
 
     # portfolio_log_file
     def test_portfolio_log_file(self):
@@ -202,9 +202,9 @@ class ConfigParserTest(unittest.TestCase):
     def test_get_data_from_calendars(self):
         self.assertEqual(self.js.settings['get_data_from_calendars'], self.cfg.getboolean('get_data_from_calendars'))
 
-    # active_task_prefixes
+    # cfg_active_task_prefixes
     def test_active_task_prefixes(self):
-        self.assertEqual(self.js.settings['active_task_prefixes'], self.cfg['active_task_prefixes'].split('\n'))
+        self.assertEqual(self.js.settings['cfg_active_task_prefixes'], self.cfg['cfg_active_task_prefixes'].split('\n'))
 
     # reserved_word_prefixes
     def test_reserved_word_prefixes(self):
