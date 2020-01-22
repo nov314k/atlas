@@ -10,7 +10,6 @@ from pathlib import Path
 from src.configuration import Configuration
 from src.engine.engine import Engine
 from src.interface.top_level_window import TopLevelWindow
-from src.driver import Driver
 
 
 def run():
@@ -35,11 +34,10 @@ def run():
     config = Configuration(Path(portfolio_file))
     engine = Engine(config)
     interface = TopLevelWindow(config, engine)
-    driver = Driver(config, interface, engine)
 
-    # TODO I need to pass the correct arguments here!
     interface.closeEvent = interface.portfolio_quit
     interface.show()
+    interface.portfolio_open()
     
     sys.exit(app.exec_())
 

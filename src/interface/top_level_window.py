@@ -82,14 +82,14 @@ class TopLevelWindow(QMainWindow):
         self.tabs.setMovable(True)
         self.setCentralWidget(self.tabs)
         self.showMaximized()
+        self.setup_menu()
 
-    def setup_menu(self, functions):
+    def setup_menu(self):
         """Set up horizontal drop-down menu bar."""
 
-        actions = dict()
         menu_bar = self.menuBar()
 
-        # Portfolio
+        # Portfolio menu
         portfolio_menu = menu_bar.addMenu("Portfolio")
         portfolio_menu.addAction(QAction("New portfolio", self))
         portfolio_menu.addAction(QAction("Open portfolio", self))
@@ -99,180 +99,117 @@ class TopLevelWindow(QMainWindow):
         quit = QAction("Quit", self)
         quit.setShortcut("Ctrl+Q")
         portfolio_menu.addAction(quit)
-        actions['quit'] = quit
+        quit.triggered.connect(self.portfolio_quit)
 
-        # File
+        # File menu
         file_menu = menu_bar.addMenu("File")
 
         new_file = QAction("New file", self)
         new_file.setShortcut("Ctrl+N")
         file_menu.addAction(new_file)
-        actions['new_file'] = new_file
+        new_file.triggered.connect(self.file_new)
 
         open_file = QAction("Open file", self)
         open_file.setShortcut("Ctrl+O")
         file_menu.addAction(open_file)
-        actions['open_file'] = open_file
+        open_file.triggered.connect(self.file_open)
 
         save_file = QAction("Save file", self)
         save_file.setShortcut("Ctrl+S")
         file_menu.addAction(save_file)
-        actions['save_file'] = save_file
+        save_file.triggered.connect(self.file_save)
 
         save_file_as = QAction("Save file as", self)
         file_menu.addAction(save_file_as)
-        actions['save_file_as'] = save_file_as
-
+        save_file_as.triggered.connect(self.file_save_as)
 
         save_file_all = QAction("Save all files", self)
         file_menu.addAction(save_file_all)
-        actions['save_file_all'] = save_file_all
+        save_file_all.triggered.connect(self.file_save_all)
 
         close_file = QAction("Close file", self)
         close_file.setShortcut("Ctrl+W")
         file_menu.addAction(close_file)
-        actions['close_file'] = close_file
+        close_file.triggered.connect(self.file_close)
 
-        # Move
+        # Move menu
         move_menu = menu_bar.addMenu("Move")
 
         goto_tab_left = QAction("Go to tab left", self)
         goto_tab_left.setShortcut("Ctrl+PgUp")
         move_menu.addAction(goto_tab_left)
-        actions['goto_tab_left'] = goto_tab_left
+        goto_tab_left.triggered.connect(self.goto_tab_left)
 
         goto_tab_right = QAction("Go to tab right", self)
         goto_tab_right.setShortcut("Ctrl+PgDown")
         move_menu.addAction(goto_tab_right)
-        actions['goto_tab_right'] = goto_tab_right
+        goto_tab_right.triggered.connect(self.goto_tab_right)
 
         move_line_up = QAction("Move line up", self)
         move_line_up.setShortcut("Alt+Up")
         move_menu.addAction(move_line_up)
-        actions['move_line_up'] = move_line_up
+        move_line_up.triggered.connect(self.move_line_up)
 
         move_line_down = QAction("Move line down", self)
         move_line_down.setShortcut("Alt+Down")
         move_menu.addAction(move_line_down)
-        actions['move_line_down'] = move_line_down
+        move_line_down.triggered.connect(self.move_line_down)
 
-        move_daily_tasks_file = QAction("Move daily tasks file", self)
-        move_daily_tasks_file.setShortcut("Alt+M")
-        move_menu.addAction(move_daily_tasks_file)
-        actions['_move_daily_tasks_file'] = move_daily_tasks_file
-
-        # Task
+        # Task menu
         task_menu = menu_bar.addMenu("Task")
 
         mark_task_done = QAction("Mark task done", self)
         mark_task_done.setShortcut("Alt+D")
         task_menu.addAction(mark_task_done)
-        actions['mark_task_done'] = mark_task_done
+        mark_task_done.triggered.connect(self.mark_task_done)
 
         mark_task_for_rescheduling = QAction("Mark task for rescheduling",
                                              self)
         mark_task_for_rescheduling.setShortcut("Alt+R")
         task_menu.addAction(mark_task_for_rescheduling)
-        actions['mark_task_for_rescheduling'] = mark_task_for_rescheduling
+        mark_task_for_rescheduling.triggered.connect(
+            self.mark_task_for_rescheduling)
 
         reschedule_periodic_task = QAction("Reschedule periodic task", self)
         reschedule_periodic_task.setShortcut("Shift+Alt+R")
         task_menu.addAction(reschedule_periodic_task)
-        actions['reschedule_periodic_task'] = reschedule_periodic_task
-
-        add_adhoc_task = QAction("Add ad hoc task", self)
-        add_adhoc_task.setShortcut("Alt+I")
-        task_menu.addAction(add_adhoc_task)
-        actions['_add_adhoc_task'] = add_adhoc_task
-
-        tag_current_line = QAction("Tag current line", self)
-        tag_current_line.setShortcut("Alt+T")
-        task_menu.addAction(tag_current_line)
-        actions['_tag_current_line'] = tag_current_line
+        reschedule_periodic_task.triggered.connect(
+            self.reschedule_periodic_task)
 
         toggle_tt = QAction("Toggle TT", self)
         toggle_tt.setShortcut("Alt+G")
         task_menu.addAction(toggle_tt)
-        actions['toggle_tt'] = toggle_tt
+        toggle_tt.triggered.connect(self.toggle_tt)
 
-        # Lists
+        # Lists menu
         lists_menu = menu_bar.addMenu("Lists")
 
         generate_ttl = QAction("Generate TTL", self)
         generate_ttl.setShortcut("Alt+N")
         lists_menu.addAction(generate_ttl)
-        actions['generate_ttl'] = generate_ttl
+        generate_ttl.triggered.connect(self.generate_ttl)
 
         generate_ttls = QAction("Generate TTLs", self)
         generate_ttls.setShortcut("Shift+Alt+N")
         lists_menu.addAction(generate_ttls)
-        actions['generate_ttls'] = generate_ttls
+        generate_ttls.triggered.connect(self.generate_ttls)
 
         extract_auxiliaries = QAction("Extract auxiliaries", self)
         extract_auxiliaries.setShortcut("Alt+A")
         lists_menu.addAction(extract_auxiliaries)
-        actions['extract_auxiliaries'] = extract_auxiliaries
+        extract_auxiliaries.triggered.connect(self.extract_auxiliaries)
 
         prepare_day_plan = QAction("Prepare day plan", self)
         prepare_day_plan.setShortcut("Alt+P")
         lists_menu.addAction(prepare_day_plan)
-        actions['prepare_day_plan'] = prepare_day_plan
+        prepare_day_plan.triggered.connect(self.prepare_day_plan)
 
-        analyse_tasks = QAction("Analyse tasks", self)
-        analyse_tasks.setShortcut("Alt+Y")
-        lists_menu.addAction(analyse_tasks)
-        actions['_analyse_tasks'] = analyse_tasks
-
-        schedule_tasks = QAction("Schedule tasks", self)
-        schedule_tasks.setShortcut("Alt+S")
-        lists_menu.addAction(schedule_tasks)
-        actions['_schedule_tasks'] = schedule_tasks
-
-        extract_earned_time = QAction("Extract earned time", self)
-        extract_earned_time.setShortcut("Alt+X")
-        lists_menu.addAction(extract_earned_time)
-        actions['_extract_earned_time'] = extract_earned_time
-
-        # Logs
-        logs_menu = menu_bar.addMenu("Logs")
-
-        log_progress = QAction("Log progress", self)
-        log_progress.setShortcut("Alt+L")
-        logs_menu.addAction(log_progress)
-        actions['_log_progress'] = log_progress
-
-        back_up = QAction("Back up portfolio", self)
-        back_up.setShortcut("Alt+B")
-        logs_menu.addAction(back_up)
-        actions['_back_up'] = back_up
-
-        # Other
+        # Other menu
         other_menu = menu_bar.addMenu("Other")
-
-        sort_periodic_tasks = QAction("Sort periodic tasks", self)
-        sort_periodic_tasks.setShortcut("Alt+Q")
-        other_menu.addAction(sort_periodic_tasks)
-        actions['_sort_periodic_tasks'] = sort_periodic_tasks
-
-        extract_daily = QAction("Extract daily", self)
-        other_menu.addAction(extract_daily)
-        actions['extract_daily'] = extract_daily
-
-        extract_booked = QAction("Extract booked", self)
-        other_menu.addAction(extract_booked)
-        actions['extract_booked'] = extract_booked
-
-        extract_periodic = QAction("Extract periodic", self)
-        other_menu.addAction(extract_periodic)
-        actions['extract_periodic'] = extract_periodic
 
         extract_shlist = QAction("Extract shlist", self)
         other_menu.addAction(extract_shlist)
-        actions['extract_shlist'] = extract_shlist
-
-        # Connect actions with functions
-        for action in actions:
-            actions[action].triggered.connect(functions[action])
+        extract_shlist.triggered.connect(self.extract_shlist)
 
     @property
     def current_tab(self):
@@ -300,8 +237,6 @@ class TopLevelWindow(QMainWindow):
         """Docstring."""
 
         return [self.tabs.widget(i) for i in range(self.tab_count)]
-
-    # START Utility Functions
 
     def _add_tab(self, path, text, newline):
         """Docstring."""
@@ -358,12 +293,7 @@ class TopLevelWindow(QMainWindow):
         return lines
 
     def _running_from_daily_tasks_file(self, tab):
-        """Check if the command is issued while a daily tasks tab is active.
-
-        :param tab widget: active tab when the command was invoked
-        :type tab: widget
-        :returns boolean:
-        """
+        """Check if the command is issued while a daily tasks tab is active."""
 
         file_name = os.path.basename(tab.path).split('.')[0]
         if not re.match(r'\d{8}', file_name):
@@ -661,6 +591,24 @@ class TopLevelWindow(QMainWindow):
         ctab.setFirstVisibleLine(fv_line)
         ctab.setCursorPosition(crow, 0)
 
+    def reschedule_periodic_task(self):
+        """Docstring."""
+
+        ctab = self.current_tab
+        self.file_save_all()
+        if not self._running_from_daily_tasks_file(ctab):
+            return
+        ctab_idx = self.tabs.indexOf(ctab)
+        fv_line = ctab.firstVisibleLine()
+        crow = ctab.getCursorPosition()[0]
+        ctask = ctab.text(crow)
+        if (ctask and ctask[0] not in self.c_active_task_prefixes):
+            return
+        self._engine.reschedule_periodic_task(ctab.path, crow)
+        self.portfolio_reload_currently_open_files()
+        ctab.setFirstVisibleLine(fv_line)
+        ctab.setCursorPosition(crow, 0)
+
     def toggle_tt(self):
         # TODO Change over current_tab to selected_tab
         selected_tab = self.current_tab
@@ -702,14 +650,14 @@ class TopLevelWindow(QMainWindow):
         selected_tab.setFirstVisibleLine(first_visible_line)
         selected_tab.setCursorPosition(selected_row, 0)
 
-    def extract_booked(self):
+    def extract_shlist(self):
         selected_tab = self.current_tab
         selected_row = selected_tab.getCursorPosition()[0]
         self.file_save_all()
         selected_tab_idx = self.tabs.indexOf(selected_tab)
         first_visible_line = selected_tab.firstVisibleLine()
         selected_task = selected_tab.text(selected_row)
-        self._engine.extract_booked()
+        self._engine.extract_shlist()
         self.portfolio_reload_currently_open_files()
         self.tabs.setCurrentIndex(selected_tab_idx)
         selected_tab.setFirstVisibleLine(first_visible_line)
