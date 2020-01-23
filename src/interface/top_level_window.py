@@ -380,9 +380,10 @@ class TopLevelWindow(QMainWindow):
 
         """
 
-        if tab is None:
+        # TODO Check the logic throughout
+        if not tab:
             tab = self.current_tab
-        if file_path is None:
+        if not file_path:
             # If it is a newly added tab, not saved before
             if tab.path is None:
                 tab.path = self.get_save_file_path()
