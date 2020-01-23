@@ -28,6 +28,6 @@ class FileTabs(QTabWidget):
         current_tab = self.widget(tab_id)
         window = self.nativeParentWidget()
         if current_tab:
-            window.update_title(current_tab.label)
+            window.update_top_window_title(current_tab.label)
         else:
-            window.update_title(None)
+            window.update_top_window_title(None)

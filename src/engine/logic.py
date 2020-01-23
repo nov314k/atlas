@@ -76,7 +76,7 @@ class Model:
     # ~ def setup(self):
         # ~ """Function docstring."""
 
-        # ~ self.setup_menu()
+        # ~ self.setup_menu_bar()
         # ~ self.open_portfolio()
     
     # ~ def get_tab(self, path):
@@ -290,7 +290,7 @@ class Model:
 
         """
 
-        result = self._view.show_add_adhoc_task()
+        result = self._view._show_add_adhoc_task_dialog()
         current_tab = self._view.current_tab
         if result:
             task_finished = result[3]
@@ -460,7 +460,7 @@ class Model:
         self.generate_ttls()
         self.extract_auxiliaries()
         danas = datetime.datetime.now()
-        result = self._view.show_prepare_day_plan(
+        result = self._view.show_prepare_day_plan_dialog(
             str(danas.day), str(danas.month), str(danas.year))
         if result:
             target_day, target_month, target_year = result
@@ -592,7 +592,7 @@ class Model:
     def log_progress(self):
         """Function docstring."""
 
-        log_entry = self.format_log_entry(self._view.show_log_progress())
+        log_entry = self.format_log_entry(self._view._show_log_progress_dialog())
         if log_entry:
             log_tab_index = -1
             for i in range(self._view.tab_count):

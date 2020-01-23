@@ -11,3 +11,8 @@ class Configuration:
         self.cfg_active_task_prefixes = (
                 self.cfg['active_task_prefixes'].split('\n'))
         self.cfg_portfolio_files = self.cfg['portfolio_files'].split('\n')
+        self.cfg_tab_order = self.cfg['tab_order'].split('\n')
+        if self.cfg['newline'] == 'linux':
+            self.cfg_newline = '\n'
+        else:
+            self.cfg_newline = '\r\n'

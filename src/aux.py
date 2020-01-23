@@ -36,7 +36,7 @@ def run():
     interface = TopLevelWindow(config, engine)
 
     interface.closeEvent = interface.portfolio_quit
-    interface.show()
+    interface.showMaximized()
     interface.portfolio_open()
     
     sys.exit(app.exec_())

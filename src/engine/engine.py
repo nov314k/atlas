@@ -60,13 +60,8 @@ class Engine:
 
         self.current_path = ''
         self.cfg = config.cfg
-        # TODO Change this to eliminate if, enter \n directly in ini
-        if self.cfg['newline'] == 'linux':
-            self.c_newline = '\n'
-        else:
-            self.c_newline = '\r\n'
-
         self.cfg_space = config.cfg_space
+        self.cfg_newline = config.cfg_newline
         self.cfg_portfolio_files = config.cfg_portfolio_files
         self.cfg_active_task_prefixes = config.cfg_active_task_prefixes
 
@@ -135,6 +130,14 @@ class Engine:
             return True
         return False
 
+    def _line_is_task_any(self, line):
+        if (self._line_is_task_basic(line)
+                or self._line_is_task_tt(line)
+                or self._line_is_task_due(line)
+                or self._line_is_task_periodic(line)
+                or self._line_is_task_daily(line)):
+            return True
+        return False
     def _line_is_task_shlist(self, line):
         if (len(line) > 0
                 and line[0] == self.cfg['open_task_prefix']
@@ -161,29 +164,29 @@ class Engine:
         edd += str(day)
         return edd
 
-    def mark_ordinary_task_done(self, fpath, linum):
+    def mark_ordinary_task_done(self, file_path, line_num):
 
         """Function docstring."""
 
-        lines = _read_file(fpath)
+        lines = _read_file(file_path)
         # TODO Check that the method is not called from the last line
         # TODO This should be done when reading the file -- ignore all
         #  trailing blank lines after # THE END #
-        ctask = lines[linum]
-        if not self._file_is_dtf(fpath):
+        selected_task = lines[line_num]
+        if not self._file_is_dtf(file_path):
             return
-        if not self._task_is_valid(ctask):
+        if not self._line_is_task_any(selected_task):
             return
-        del lines[linum]
+        del lines[line_num]
         now = datetime.datetime.now()
-        taux = self.c_newline
+        taux = self.cfg_newline
         taux += self.cfg['done_task_prefix']
         taux += self.cfg_space + now.strftime("%Y-%m-%d")
-        taux += self.cfg_space + ctask
+        taux += self.cfg_space + selected_task
         lines.append(taux)
         contents = "".join(line for line in lines)
-        _write_file(fpath, contents)
-        self.mark_task_done_at_origin(ctask)
+        _write_file(file_path, contents)
+        self.mark_task_done_at_origin(selected_task)
 
     def mark_task_done_at_origin(self, task):
         """Function docstring."""
@@ -229,7 +232,7 @@ class Engine:
         lines = _read_file(file_path)
         selected_task = lines[line_num]
         # TODO Check that we're coming from DTF!
-        if not self._task_is_valid(selected_task):
+        if not self._line_is_task_periodic(selected_task):
             return
         del lines[line_num]
         marked_task = self.cfg['for_rescheduling_task_prefix']
@@ -253,7 +256,7 @@ class Engine:
         selected_task = re.sub(r'\d{2}:\d{2}' + self.cfg_space,
                                "",
                                selected_task)
-        if not self._task_is_valid(selected_task, recurring=True):
+        if not self._line_is_task_periodic(selected_task):
             return
         self.mark_done_at_origin(task)
         self.mark_task_for_rescheduling(mark_as_rescheduled=True)
@@ -290,7 +293,7 @@ class Engine:
         below_incoming_header = False
         below_task_group_header = False
         ttl_tasks = [self.cfg['heading_prefix'] + self.cfg_space + self.cfg[
-            'ttl_heading'], self.c_newline, self.c_newline]
+            'ttl_heading'], self.cfg_newline, self.cfg_newline]
         for idx, line in enumerate(lines):
             if below_incoming_header:
                 processed_lines.append(line)
@@ -301,7 +304,7 @@ class Engine:
                 processed_lines.append(line)
             if self._line_is_heading_task_group(line):
                 below_task_group_header = True
-        processed_lines = ttl_tasks + [self.c_newline] + processed_lines
+        processed_lines = ttl_tasks + [self.cfg_newline] + processed_lines
         contents = "".join(line for line in processed_lines)
         _write_file(file_path, contents)
 
@@ -421,7 +424,7 @@ class Engine:
     def _add_adhoc_task(self):
         """In development. Do not use."""
 
-        result = self._view.show_add_adhoc_task()
+        result = self._view._show_add_adhoc_task_dialog()
         current_tab = self._view.current_tab
         if result:
             task_finished = result[3]
@@ -608,7 +611,7 @@ class Engine:
     def _log_progress(self):
         """In development. Do not use."""
 
-        log_entry = self._format_log_entry(self._view.show_log_progress())
+        log_entry = self._format_log_entry(self._view._show_log_progress_dialog())
         if log_entry:
             log_tab_index = -1
             for i in range(self._view.tab_count):

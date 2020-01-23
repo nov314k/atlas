@@ -5,86 +5,60 @@ import datetime
 import re
 import sys
 
-from PyQt5.QtCore import Qt, pyqtSignal, QTimer
+from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (QAction, QDesktopWidget, QWidget, QVBoxLayout,
                              QTabWidget, QFileDialog, QMessageBox, QMainWindow,
                              QShortcut)
 from PyQt5.QtGui import QKeySequence
 from PyQt5.QtGui import QIcon
 from pkg_resources import resource_filename
-from interface.prepare_day_dialog import PrepareDayDialog
-from interface.log_progress_dialog import LogProgressDialog
-from interface.add_adhoc_task_dialog import AddAdhocTaskDialog
-from interface.editor_pane import EditorPane
-from interface.menu_bar import MenuBar
-from interface.file_tabs import FileTabs
+from src.interface.prepare_day_dialog import PrepareDayDialog
+from src.interface.log_progress_dialog import LogProgressDialog
+from src.interface.add_adhoc_task_dialog import AddAdhocTaskDialog
+from src.interface.editor_pane import EditorPane
+from src.interface.menu_bar import MenuBar
+from src.interface.file_tabs import FileTabs
 
-
-def screen_size():
-    """Docstring."""
-
-    screen = QDesktopWidget().screenGeometry()
-    return screen.width(), screen.height()
-
-def eight_digit_date(day, month, year):
-    # TODO Change over to f-strings
-    edd = str(year)
-    if month < 10:
-        edd += "0"
-    edd += str(month)
-    if day < 10:
-        edd += "0"
-    edd += str(day)
-    return edd
 
 class TopLevelWindow(QMainWindow):
     """Docstring."""
 
-    title = "Atlas"
-    icon = 'icon'
-    timer = None
-    open_file = pyqtSignal(str)
-    previous_folder = None
+    # open_file = pyqtSignal(str)
+    # previous_folder = None
 
-    def __init__(self, config, engine, parent=None):
+    def __init__(self, config, doer, parent=None):
         """TopLevelWindow init."""
 
         super().__init__(parent)
-        self._engine = engine
+
+        self.doer = doer
         self.cfg = config.cfg
-        self.c_space = config.cfg['space'][1]
-        self.c_active_task_prefixes = config.cfg['active_task_prefixes']
-        if self.cfg['newline'] == 'linux':
-            self.c_newline = '\n'
-        else:
-            self.c_newline = '\r\n'
-        
-        self.widget = QWidget()
-        self.read_only_tabs = False
-        self.menu_bar = MenuBar(self.widget)
-        self.tabs = FileTabs()
-        self.open_file_heading = "Open file"
-        self.save_file_heading = "Save file"
-        self.atlas_file_extension_for_saving = "Atlas (*.pmd.txt)"
-        self.setup()
+        self.cfg_space = config.cfg_space
+        self.cfg_newline = config.cfg_newline
+        self.cfg_tab_order = config.cfg_tab_order
+        self.cfg_portfolio_files = config.cfg_portfolio_files
+        self.cfg_active_task_prefixes = config.cfg_active_task_prefixes
 
-    def setup(self):
-        """Docstring."""
-
-        self.setWindowIcon(QIcon(
-            resource_filename('resources', 'images/' + self.icon)))
-        self.update_title()
-        screen_width, screen_height = screen_size()
+        screen_width, screen_height = self.screen_size()
         self.setMinimumSize(screen_width // 2, screen_height // 2)
-        self.setTabPosition(Qt.AllDockWidgetAreas, QTabWidget.North)
-        widget_layout = QVBoxLayout()
-        self.widget.setLayout(widget_layout)
-        self.tabs.setMovable(True)
-        self.setCentralWidget(self.tabs)
-        self.showMaximized()
-        self.setup_menu()
+        # TODO Consider adding 'resources' and 'images/' to .ini
+        self.setWindowIcon(QIcon(
+            resource_filename('resources', 'images/' + self.cfg['atlas_icon'])))
+        self.update_top_window_title()
 
-    def setup_menu(self):
+        self.widget = QWidget()
+        self.widget.setLayout(QVBoxLayout())
+
+        self.menu_bar = MenuBar(self.widget)
+        self.setup_menu_bar()
+
+        self.tabs = FileTabs()
+        self.tabs.setMovable(True)
+        self.read_only_tabs = False
+        self.setCentralWidget(self.tabs)
+        self.setTabPosition(Qt.AllDockWidgetAreas, QTabWidget.North)
+
+    def setup_menu_bar(self):
         """Set up horizontal drop-down menu bar."""
 
         menu_bar = self.menuBar()
@@ -119,11 +93,12 @@ class TopLevelWindow(QMainWindow):
         file_menu.addAction(save_file)
         save_file.triggered.connect(self.file_save)
 
-        save_file_as = QAction("Save file as", self)
+        save_file_as = QAction("Save file &as", self)
         file_menu.addAction(save_file_as)
         save_file_as.triggered.connect(self.file_save_as)
 
         save_file_all = QAction("Save all files", self)
+        open_file.setShortcut("Ctrl+Shift+S")
         file_menu.addAction(save_file_all)
         save_file_all.triggered.connect(self.file_save_all)
 
@@ -238,90 +213,96 @@ class TopLevelWindow(QMainWindow):
 
         return [self.tabs.widget(i) for i in range(self.tab_count)]
 
-    def _add_tab(self, path, text, newline):
+    # Utilities
+
+    def add_tab(self, path, text):
         """Docstring."""
 
-        new_tab = EditorPane(path, text, newline)
+        new_tab = EditorPane(path, text, self.cfg_newline)
         new_tab_index = self.tabs.addTab(new_tab, new_tab.label)
 
-        @new_tab.modificationChanged.connect
-        def on_modified():
-            """Docstring."""
+        # @new_tab.modificationChanged.connect
+        # def on_modified():
+        #     """Docstring."""
+        #
+        #     modified_tab_index = self.tabs.currentIndex()
+        #     self.tabs.setTabText(modified_tab_index, new_tab.label)
+        #     self.update_top_window_title(new_tab.label)
 
-            modified_tab_index = self.tabs.currentIndex()
-            self.tabs.setTabText(modified_tab_index, new_tab.label)
-            self.update_title(new_tab.label)
-
-        @new_tab.open_file.connect
-        def on_open_file(file):
-            """Docstring."""
-
-            # Bubble the signal up
-            self.open_file.emit(file)
+        # @new_tab.open_file.connect
+        # def on_open_file(file):
+        #    """Docstring."""
+        #
+        #     # Bubble the signal up
+        #     self.open_file.emit(file)
 
         self.tabs.setCurrentIndex(new_tab_index)
         new_tab.setFocus()
-        if self.read_only_tabs:
-            new_tab.setReadOnly(self.read_only_tabs)
         return new_tab
 
-    def _get_open_file_path(self, folder, extensions):
+    def get_open_file_path(self):
         """Get the path of the file to load (dialog)."""
 
-        extensions = '*' + extensions
-        path, _ = QFileDialog.getOpenFileName(self.widget,
-                                              self.open_file_heading,
-                                              folder,
-                                              extensions)
+        # TODO Consider moving "Open file" to .ini configuration
+        path, _ = QFileDialog.getOpenFileName(
+            self.widget,
+            "Open file",
+            self.cfg['portfolio_base_dir'],
+            self.cfg['atlas_file_extension_for_saving'])
         return path
 
-    def _get_save_file_path(self, folder):
+    def get_save_file_path(self):
         """Get the path of the file to save (dialog)."""
 
+        # TODO Consider moving "Save file" to .ini configuration
         path, _ = QFileDialog.getSaveFileName(
-                self.widget,
-                self.open_file_heading, folder,
-                self.atlas_file_extension_for_saving)
+            self.widget,
+            "Save file",
+            self.cfg['portfolio_base_dir'],
+            self.cfg['atlas_file_extension_for_saving'])
         return path
 
-    def _read_file(self, fpath, single_string=False):
-        with open(fpath, 'r') as fpath_:
+    @staticmethod
+    def read_file(file_path, single_string=False):
+        with open(file_path, 'r') as file_path_:
             if single_string:
-                lines = fpath_.read()
+                lines = file_path_.read()
             else:
-                lines = fpath_.readlines()
+                lines = file_path_.readlines()
         return lines
 
-    def _running_from_daily_tasks_file(self, tab):
-        """Check if the command is issued while a daily tasks tab is active."""
+    @staticmethod
+    def screen_size():
+        """Docstring."""
 
-        file_name = os.path.basename(tab.path).split('.')[0]
-        if not re.match(r'\d{8}', file_name):
-            message = ("This command can only be run"
-                       "from a daily tasks file.")
-            self.show_message(message)
-            return False
-        return True
+        screen = QDesktopWidget().screenGeometry()
+        return screen.width(), screen.height()
+
+    def update_top_window_title(self, filename=None):
+        """Docstring."""
+
+        title = self.cfg['top_window_title']
+        if filename:
+            title += " - " + filename
+        self.setWindowTitle(title)
+
+    # Portfolio menu commands
 
     def portfolio_open(self):
         """Function docstring."""
 
-        launch_paths = set()
-        for old_path in self.cfg['tab_order'].split('\n'):
-            if old_path in launch_paths:
-                continue
-            self.file_open(old_path)
-        danas = datetime.datetime.now()
-        file_name = str(danas.year)
-        if danas.month < 10:
-            file_name += "0"
-        file_name += str(danas.month)
-        if danas.day < 10:
-            file_name += "0"
-        file_name += str(danas.day)
-        file_name += self.cfg['atlas_files_extension']
-        if os.path.isfile(self.cfg['portfolio_base_dir'] + file_name):
-            self.file_open(self.cfg['portfolio_base_dir'] + file_name)
+        for file_path in self.cfg_tab_order:
+            self.file_open(file_path)
+        today = datetime.datetime.now()
+        file_name = f"{today.year}{today.month:02}{today.day:02}"
+        file_name_n_ext = file_name + self.cfg['atlas_files_extension']
+        if os.path.isfile(self.cfg['portfolio_base_dir'] + file_name_n_ext):
+            self.file_open(self.cfg['portfolio_base_dir'] + file_name_n_ext)
+
+    def portfolio_reload_currently_open_tabs(self):
+        for tab in self.widgets:
+            contents = self.read_file(tab.path, single_string=True)
+            tab.setText(contents)
 
     def portfolio_quit(self):
         """Quit Atlas.
@@ -340,15 +321,12 @@ class TopLevelWindow(QMainWindow):
         # self.save_session_settings()
         sys.exit(0)
 
-    def portfolio_reload_currently_open_files(self):
-        for tab in self.widgets:
-            contents = self._read_file(tab.path, single_string=True)
-            tab.setText(contents)
+    # File menu commands
 
     def file_new(self):
         """Add a new tab."""
 
-        self._add_tab(None, "", self.c_newline)
+        self.add_tab(None, "", self.c_newline)
     
     def file_open(self, path=None):
         """Open a file from disk in a new tab.
@@ -365,9 +343,7 @@ class TopLevelWindow(QMainWindow):
 
         # Get the path from the user if it's not defined
         if not path:
-            path = self._get_open_file_path(
-                    self.cfg['portfolio_base_dir'],
-                    self.cfg['atlas_files_extension'])
+            path = self.get_open_file_path()
         # Was the dialog canceled?
         if not path:
             return
@@ -383,9 +359,9 @@ class TopLevelWindow(QMainWindow):
             lines = faux.readlines()
             for line in lines:
                 file_content += line
-        self._add_tab(path, file_content, '\n')
+        self.add_tab(path, file_content)
 
-    def file_save(self, path=None, tab=None):
+    def file_save(self, file_path=None, tab=None):
         """Save file contained in a tab to disk.
 
         If `tab` is not specified, it assumes that we want to save the file
@@ -397,26 +373,25 @@ class TopLevelWindow(QMainWindow):
 
         Parameters
         ----------
-        path : str
+        file_path : str
             Path to save tab contents to.
         tab : EditorPane
             Tab containing the contents to save to `path`.
 
         """
-        # TODO Review logic!
-        if not tab:
+
+        if tab is None:
             tab = self.current_tab
-        if not path:
+        if file_path is None:
             # If it is a newly added tab, not saved before
             if tab.path is None:
-                tab.path = self._get_save_file_path(
-                        self.cfg['portfolio_base_dir'])
+                tab.path = self.get_save_file_path()
             # Was the dialog canceled?
-            if not tab.path:
+            if tab.path is None:
                 return
-            path = tab.path
-        with open(path, 'w', encoding=self.cfg['encoding']) as path_:
-            path_.writelines(tab.text())
+            file_path = tab.path
+        with open(file_path, 'w', encoding=self.cfg['encoding']) as file_path_:
+            file_path_.writelines(tab.text())
         tab.setModified(False)
 
     def file_save_as(self):
@@ -428,25 +403,32 @@ class TopLevelWindow(QMainWindow):
 
         """
 
-        path = self.get_save_file_path(self.cfg['portfolio_base_dir'])
-        # Was the dialog canceled?
-        if not path:
+        file_path = self.get_save_file_path()
+        if file_path is None:
             return
         for widget in self.widgets:
-            if widget.path == path:
+            if widget.path == file_path:
                 # if os.path.samefile(path, widget.path):
                 msg = "'{}' is open. Close if before overwriting."
-                self.show_message(msg.format(os.path.basename(path)))
+                self.show_message(msg.format(os.path.basename(file_path)))
                 self.focus_tab(widget)
                 return
-        self.file_save(path)
+        self.file_save(file_path=file_path)
 
     def file_save_all(self):
+        """Docstring."""
+
+        selected_tab = self.current_tab
+        selected_row = selected_tab.getCursorPosition()[0]
+        selected_tab_idx = self.tabs.indexOf(selected_tab)
+        first_visible_line = selected_tab.firstVisibleLine()
         for tab in self.widgets:
-            ctab_idx = self.tabs.indexOf(tab)
-            self.tabs.setCurrentIndex(ctab_idx)
-            self.file_save(path=tab.path, tab=tab)
-            # TODO Make sure you return to current tab!!
+            tab_idx = self.tabs.indexOf(tab)
+            self.tabs.setCurrentIndex(tab_idx)
+            self.file_save(file_path=tab.path, tab=tab)
+        self.tabs.setCurrentIndex(selected_tab_idx)
+        selected_tab.setFirstVisibleLine(first_visible_line)
+        selected_tab.setCursorPosition(selected_row, 0)
 
     def file_close(self):
         """Close the current file (remove the current tab).
@@ -474,16 +456,18 @@ class TopLevelWindow(QMainWindow):
         self.tabs.removeTab(current_tab_idx)
         return True
 
+    # Move menu commands
+
     def goto_tab_left(self):
         """Change focus to one tab left. Allows for wrapping around."""
 
         tab = self.current_tab
         index = self.tabs.indexOf(tab)
         if index-1 < 0:
-            next_tab = self.tab_count - 1
+            tab_left_idx = self.tab_count - 1
         else:
-            next_tab = index - 1
-        self.tabs.setCurrentIndex(next_tab)
+            tab_left_idx = index - 1
+        self.tabs.setCurrentIndex(tab_left_idx)
 
     def goto_tab_right(self):
         """Change focus to one tab right. Allows for wrapping around."""
@@ -491,10 +475,10 @@ class TopLevelWindow(QMainWindow):
         tab = self.current_tab
         index = self.tabs.indexOf(tab)
         if index+1 > self.tab_count-1:
-            next_tab = 0
+            tab_right_idx = 0
         else:
-            next_tab = index + 1
-        self.tabs.setCurrentIndex(next_tab)
+            tab_right_idx = index + 1
+        self.tabs.setCurrentIndex(tab_right_idx)
 
     def move_line_up(self):
         """Move current line of text one row up."""
@@ -538,150 +522,124 @@ class TopLevelWindow(QMainWindow):
             tab.setFirstVisibleLine(first_visible_line)
             tab.setCursorPosition(row + 1, 0)
 
+    # Task menu commands
+
     def mark_task_done(self):
-        """Mark current task as done.
+        """Interface to doer.mark_task_done()."""
 
-        Marks the current task as done first in the daily tasks file, and then
-        also at task definition. This method can only be run from a daily tasks
-        file, and only on tasks that have an `open_task_prefix`. It calls
-        `mark_ordinary_task_done()` to do the actual work. Special care is
-        taken to preserve the view. After marking a task as done, it calls
-        `_analyse_tasks()` and `_schedule_tasks()` to refresh the information.
-
-        Notes
-        -----
-        In current code, care has been taken to avoid the bug where tab title
-        is incorrectly changed when switching between tabs. Be aware of this
-        when changing the code.
-
-        """
-
-        ctab = self.current_tab
-        self.file_save_all()
-        if not self._running_from_daily_tasks_file(ctab):
-            return
-        ctab_idx = self.tabs.indexOf(ctab)
-        fv_line = ctab.firstVisibleLine()
-        crow = ctab.getCursorPosition()[0]
-        ctask = ctab.text(crow)
-        ctask = re.sub(r'\d{2}:\d{2}' + self.c_space, "", ctask)
-        if (ctask and ctask[0] not in self.c_active_task_prefixes):
-            return
-        self._engine.mark_ordinary_task_done(ctab.path, crow)
-        self.portfolio_reload_currently_open_files()
-        ctab.setFirstVisibleLine(fv_line)
-        ctab.setCursorPosition(crow, 0)
-
-    def mark_task_for_rescheduling(self):
-        """Docstring."""
-
-        ctab = self.current_tab
-        self.file_save_all()
-        if not self._running_from_daily_tasks_file(ctab):
-            return
-        ctab_idx = self.tabs.indexOf(ctab)
-        fv_line = ctab.firstVisibleLine()
-        crow = ctab.getCursorPosition()[0]
-        ctask = ctab.text(crow)
-        ctask = re.sub(r'\d{2}:\d{2}' + self.c_space, "", ctask)
-        if (ctask and ctask[0] not in self.c_active_task_prefixes):
-            return
-        self._engine.mark_task_for_rescheduling(ctab.path, crow)
-        self.portfolio_reload_currently_open_files()
-        ctab.setFirstVisibleLine(fv_line)
-        ctab.setCursorPosition(crow, 0)
-
-    def reschedule_periodic_task(self):
-        """Docstring."""
-
-        ctab = self.current_tab
-        self.file_save_all()
-        if not self._running_from_daily_tasks_file(ctab):
-            return
-        ctab_idx = self.tabs.indexOf(ctab)
-        fv_line = ctab.firstVisibleLine()
-        crow = ctab.getCursorPosition()[0]
-        ctask = ctab.text(crow)
-        if (ctask and ctask[0] not in self.c_active_task_prefixes):
-            return
-        self._engine.reschedule_periodic_task(ctab.path, crow)
-        self.portfolio_reload_currently_open_files()
-        ctab.setFirstVisibleLine(fv_line)
-        ctab.setCursorPosition(crow, 0)
-
-    def toggle_tt(self):
-        # TODO Change over current_tab to selected_tab
         selected_tab = self.current_tab
         selected_row = selected_tab.getCursorPosition()[0]
-        self.file_save_all()
         selected_tab_idx = self.tabs.indexOf(selected_tab)
         first_visible_line = selected_tab.firstVisibleLine()
-        selected_task = selected_tab.text(selected_row)
-        selected_task = re.sub(r'\d{2}:\d{2}' + self.c_space, "", selected_task)
-        self._engine.toggle_tt(selected_tab.path, selected_row)
-        self.portfolio_reload_currently_open_files()
+        self.file_save_all()
+        # TODO Consider generalizing as it follows the same pattern
+        self.doer.mark_ordinary_task_done(selected_tab.path, selected_row)
+        self.portfolio_reload_currently_open_tabs()
         self.tabs.setCurrentIndex(selected_tab_idx)
         selected_tab.setFirstVisibleLine(first_visible_line)
         selected_tab.setCursorPosition(selected_row, 0)
 
-    def generate_ttl(self):
+    def mark_task_for_rescheduling(self):
+        """Interface to doer.mark_task_for_rescheduling()."""
+
         selected_tab = self.current_tab
         selected_row = selected_tab.getCursorPosition()[0]
-        self.file_save_all()
         selected_tab_idx = self.tabs.indexOf(selected_tab)
         first_visible_line = selected_tab.firstVisibleLine()
-        selected_task = selected_tab.text(selected_row)
-        self._engine.generate_ttl(selected_tab.path)
-        self.portfolio_reload_currently_open_files()
+        self.file_save_all()
+        # TODO Consider generalizing as it follows the same pattern
+        self.doer.mark_task_for_rescheduling(selected_tab.path, selected_row)
+        self.portfolio_reload_currently_open_tabs()
+        self.tabs.setCurrentIndex(selected_tab_idx)
+        selected_tab.setFirstVisibleLine(first_visible_line)
+        selected_tab.setCursorPosition(selected_row, 0)
+
+    def reschedule_periodic_task(self):
+        """Interface to doer.reschedule_periodic_task."""
+
+        selected_tab = self.current_tab
+        selected_row = selected_tab.getCursorPosition()[0]
+        selected_tab_idx = self.tabs.indexOf(selected_tab)
+        first_visible_line = selected_tab.firstVisibleLine()
+        self.file_save_all()
+        # TODO Consider generalizing as it follows the same pattern
+        self.doer.reschedule_periodic_task(selected_tab.path, selected_row)
+        self.portfolio_reload_currently_open_tabs()
+        self.tabs.setCurrentIndex(selected_tab_idx)
+        selected_tab.setFirstVisibleLine(first_visible_line)
+        selected_tab.setCursorPosition(selected_row, 0)
+
+    def toggle_tt(self):
+        """Interface to doer.toggle_tt()."""
+
+        selected_tab = self.current_tab
+        selected_row = selected_tab.getCursorPosition()[0]
+        selected_tab_idx = self.tabs.indexOf(selected_tab)
+        first_visible_line = selected_tab.firstVisibleLine()
+        self.file_save_all()
+        # TODO Consider generalizing as it follows the same pattern
+        self.doer.toggle_tt(selected_tab.path, selected_row)
+        self.portfolio_reload_currently_open_tabs()
+        self.tabs.setCurrentIndex(selected_tab_idx)
+        selected_tab.setFirstVisibleLine(first_visible_line)
+        selected_tab.setCursorPosition(selected_row, 0)
+
+    # Lists menu commands
+
+    def generate_ttl(self):
+        """Interface to doer.generate_ttl()."""
+
+        selected_tab = self.current_tab
+        selected_row = selected_tab.getCursorPosition()[0]
+        selected_tab_idx = self.tabs.indexOf(selected_tab)
+        first_visible_line = selected_tab.firstVisibleLine()
+        self.file_save_all()
+        # TODO Consider generalizing as it follows the same pattern
+        self.doer.generate_ttl(selected_tab.path)
+        self.portfolio_reload_currently_open_tabs()
         self.tabs.setCurrentIndex(selected_tab_idx)
         selected_tab.setFirstVisibleLine(first_visible_line)
         selected_tab.setCursorPosition(selected_row, 0)
 
     def generate_ttls(self):
-        selected_tab = self.current_tab
-        selected_row = selected_tab.getCursorPosition()[0]
-        self.file_save_all()
-        selected_tab_idx = self.tabs.indexOf(selected_tab)
-        first_visible_line = selected_tab.firstVisibleLine()
-        selected_task = selected_tab.text(selected_row)
-        self._engine.generate_ttls()
-        self.portfolio_reload_currently_open_files()
-        self.tabs.setCurrentIndex(selected_tab_idx)
-        selected_tab.setFirstVisibleLine(first_visible_line)
-        selected_tab.setCursorPosition(selected_row, 0)
+        """Interface to doer.generate_ttls()."""
 
-    def extract_shlist(self):
         selected_tab = self.current_tab
         selected_row = selected_tab.getCursorPosition()[0]
-        self.file_save_all()
         selected_tab_idx = self.tabs.indexOf(selected_tab)
         first_visible_line = selected_tab.firstVisibleLine()
-        selected_task = selected_tab.text(selected_row)
-        self._engine.extract_shlist()
-        self.portfolio_reload_currently_open_files()
+        self.file_save_all()
+        # TODO Consider generalizing as it follows the same pattern
+        self.doer.generate_ttls()
+        self.portfolio_reload_currently_open_tabs()
         self.tabs.setCurrentIndex(selected_tab_idx)
         selected_tab.setFirstVisibleLine(first_visible_line)
         selected_tab.setCursorPosition(selected_row, 0)
 
     def extract_auxiliaries(self):
+        """Interface to self.doer.extract_auxiliaries()."""
+
         selected_tab = self.current_tab
         selected_row = selected_tab.getCursorPosition()[0]
-        self.file_save_all()
         selected_tab_idx = self.tabs.indexOf(selected_tab)
         first_visible_line = selected_tab.firstVisibleLine()
-        selected_task = selected_tab.text(selected_row)
-        self._engine.extract_auxiliaries()
-        self.portfolio_reload_currently_open_files()
+        self.file_save_all()
+        # TODO Consider generalizing as it follows the same pattern
+        self.doer.extract_auxiliaries()
+        self.portfolio_reload_currently_open_tabs()
         self.tabs.setCurrentIndex(selected_tab_idx)
         selected_tab.setFirstVisibleLine(first_visible_line)
         selected_tab.setCursorPosition(selected_row, 0)
 
     def prepare_day_plan(self):
+        """Interface to doer.prepare_day_plan()."""
+
+        self.file_save_all()
         today = datetime.datetime.now()
-        day, month, year = self.show_prepare_day_plan(str(today.day),
-                                                      str(today.month),
-                                                      str(today.year))
-        file_name = eight_digit_date(day, month, year)
+        day, month, year = self.show_prepare_day_plan_dialog(str(today.day),
+                                                             str(today.month),
+                                                             str(today.year))
+        file_name = f"{year}{month:02}{day:02}"
         file_name_n_ext = file_name + self.cfg['atlas_files_extension']
         dtf_open = False
         for idx in range(self.tab_count):
@@ -690,8 +648,27 @@ class TopLevelWindow(QMainWindow):
                 dtf_open = True
         if dtf_open:
             self.tabs.removeTab(idx)
-        self._engine.prepare_day_plan(day, month, year)
+        self.doer.prepare_day_plan(day, month, year)
         self.file_open(self.cfg['portfolio_base_dir'] + file_name_n_ext)
+
+    # Other menu commands
+
+    def extract_shlist(self):
+        """Interface to doer.extract_shlist()."""
+
+        selected_tab = self.current_tab
+        selected_row = selected_tab.getCursorPosition()[0]
+        selected_tab_idx = self.tabs.indexOf(selected_tab)
+        first_visible_line = selected_tab.firstVisibleLine()
+        self.file_save_all()
+        # TODO Consider generalizing as it follows the same pattern
+        self.doer.extract_shlist()
+        self.portfolio_reload_currently_open_tabs()
+        self.tabs.setCurrentIndex(selected_tab_idx)
+        selected_tab.setFirstVisibleLine(first_visible_line)
+        selected_tab.setCursorPosition(selected_row, 0)
+
+    # Show messages and dialogs
 
     def show_message(self, message, information=None, icon=None):
         """Docstring."""
@@ -744,15 +721,7 @@ class TopLevelWindow(QMainWindow):
         message_box.setDefaultButton(message_box.Yes)
         return message_box.exec()
 
-    def update_title(self, filename=None):
-        """Docstring."""
-
-        title = self.title
-        if filename:
-            title += " - " + filename
-        self.setWindowTitle(title)
-
-    def show_prepare_day_plan(self, target_day, target_month, target_year):
+    def show_prepare_day_plan_dialog(self, target_day, target_month, target_year):
         """Docstring."""
 
         # ~ finder = FindReplaceDialog(self)
@@ -763,8 +732,8 @@ class TopLevelWindow(QMainWindow):
                     finder.target_year())
         return None
 
-    def show_log_progress(self):
-        """Docstring."""
+    def _show_log_progress_dialog(self):
+        """Experimental. Do not use."""
 
         log_entry = LogProgressDialog(self)
         log_entry.setup()
@@ -772,8 +741,8 @@ class TopLevelWindow(QMainWindow):
             return log_entry.log_entry()
         return None
 
-    def show_add_adhoc_task(self):
-        """Docstring."""
+    def _show_add_adhoc_task_dialog(self):
+        """Experimental. Do not use."""
 
         adhoc_task = AddAdhocTaskDialog(self)
         adhoc_task.setup()
