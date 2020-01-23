@@ -518,7 +518,7 @@ class TopLevelWindow(QMainWindow):
         first_visible_line = selected_tab.firstVisibleLine()
         self.file_save_all()
         # TODO Consider generalizing as it follows the same pattern
-        self.doer.mark_ordinary_task_done(selected_tab.path, selected_row)
+        self.doer.mark_task_done(selected_tab.path, selected_row)
         self.portfolio_reload_currently_open_tabs()
         self.tabs.setCurrentIndex(selected_tab_idx)
         selected_tab.setFirstVisibleLine(first_visible_line)

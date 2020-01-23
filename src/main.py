@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import QApplication
 from pathlib import Path
 
 from src.configuration import Configuration
-from src.engine.engine import Engine
+from src.engine.doer import Doer
 from src.interface.top_level_window import TopLevelWindow
 
 
@@ -32,7 +32,7 @@ def run():
     app.setPalette(palette)
 
     config = Configuration(Path(portfolio_file))
-    engine = Engine(config)
+    engine = Doer(config)
     interface = TopLevelWindow(config, engine)
 
     interface.closeEvent = interface.portfolio_quit

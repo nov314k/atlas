@@ -31,11 +31,11 @@ import shutil
 from dateutil.relativedelta import relativedelta
 
 
-class Engine:
-    """Atlas doer: logic and functionality."""
+class Doer:
+    """Atlas doer/model/engine: logic and functionality."""
 
     def __init__(self, config):
-        """TheDoer initialization."""
+        """Doer initialization."""
 
         self.cfg = config.cfg
         self.cfg_space = config.cfg_space
