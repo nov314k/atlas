@@ -1,3 +1,4 @@
+log
 expl
 venv
 Include
@@ -7,5 +8,3 @@ pyvenv.cfg
 */__pycache__
 *.pyc
 test-portfolio
-atlas.log
-src/atlas.log
