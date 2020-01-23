@@ -1,4 +1,4 @@
-"""Atlas engine: logic and functionality.
+"""Atlas doer/model/engine: logic and functionality.
 
 Copyright notice
 ----------------
@@ -31,141 +31,21 @@ import shutil
 from dateutil.relativedelta import relativedelta
 
 
-def _read_file(file_path, single_string=False):
-    with open(file_path, 'r') as file_path_:
-        if single_string:
-            lines = file_path_.read()
-            # TODO Make both branches do same kind of trimming
-            lines.rstrip()
-        else:
-            lines = file_path_.readlines()
-            numof_lines_to_the_end = len(lines)
-            # for idx, line in enumerate(lines):
-            #    # TODO Fix this hard-coded constant
-            #    if "# THE END #" in line:
-            #        numof_lines_to_the_end = idx + 1
-            lines = lines[:numof_lines_to_the_end]
-    return lines
-
-def _write_file(file_path, contents):
-    with open(file_path, 'w') as file_path_:
-        file_path_.write(contents)
-
-
 class Engine:
-    """Atlas model: all core functionality (commands)."""
+    """Atlas doer: logic and functionality."""
 
     def __init__(self, config):
-        """Initiates Editor instance variables."""
+        """TheDoer initialization."""
 
-        self.current_path = ''
         self.cfg = config.cfg
         self.cfg_space = config.cfg_space
         self.cfg_newline = config.cfg_newline
         self.cfg_portfolio_files = config.cfg_portfolio_files
         self.cfg_active_task_prefixes = config.cfg_active_task_prefixes
 
-    def _line_is_heading(self, line):
-        if len(line) > 0 and line[0] == self.cfg['heading_prefix']:
-            return True
-        return False
+    # Core functionality
 
-    def _line_is_heading_ttl(self, line):
-        if self._line_is_heading(line) and self.cfg['ttl_heading'] in line:
-            return True
-        return False
-
-    def _line_is_heading_incoming(self, line):
-        if self._line_is_heading(line) and self.cfg['incoming_heading'] in line:
-            return True
-        return False
-
-    def _line_is_heading_task_group(self, line):
-        if (self._line_is_heading(line)
-                and not self._line_is_heading_ttl(line)
-                and not self._line_is_heading_ttl(line)):
-            return True
-        return False
-
-    def _line_is_task_basic(self, line):
-        if (len(line) > 0
-                and line[0] in self.cfg_active_task_prefixes
-                and self.cfg['dur_prop'] in line
-                and self.cfg['due_prop'] not in line
-                and self.cfg['rec_prop'] not in line):
-            return True
-        return False
-
-    def _line_is_task_tt(self, line):
-        if (self._line_is_task_basic(line)
-                and line[0] == self.cfg['top_task_prefix']):
-            return True
-        return False
-
-    def _line_is_task_due(self, line):
-        if (len(line) > 0
-                and line[0] == self.cfg['open_task_prefix']
-                and self.cfg['dur_prop'] in line
-                and self.cfg['due_prop'] in line
-                and self.cfg['rec_prop'] not in line):
-            return True
-        return False
-
-    def _line_is_task_daily(self, line):
-        if (len(line) > 0
-                and line[0] == self.cfg['open_task_prefix']
-                and self.cfg['dur_prop'] in line
-                and self.cfg['due_prop'] not in line
-                and self.cfg['daily_rec_prop_val'] in line):
-            return True
-        return False
-
-    def _line_is_task_periodic(self, line):
-        if (len(line) > 0
-                and line[0] == self.cfg['open_task_prefix']
-                and self.cfg['dur_prop'] in line
-                and self.cfg['due_prop'] in line
-                and self.cfg['rec_prop'] in line
-                and self.cfg['daily_rec_prop_val'] not in line):
-            return True
-        return False
-
-    def _line_is_task_any(self, line):
-        if (self._line_is_task_basic(line)
-                or self._line_is_task_tt(line)
-                or self._line_is_task_due(line)
-                or self._line_is_task_periodic(line)
-                or self._line_is_task_daily(line)):
-            return True
-        return False
-    def _line_is_task_shlist(self, line):
-        if (len(line) > 0
-                and line[0] == self.cfg['open_task_prefix']
-                and self.cfg['dur_prop'] in line
-                and self.cfg['shlist_cat'] in line):
-            return True
-        return False
-
-    def _file_is_dtf(self, file_path):
-        # TODO Fix assumption that folder separator is always /
-        file_name_and_ext = file_path.split('/')[-1]
-        file_name = file_name_and_ext.split('.')[0]
-        if re.match(r'\d{8}', file_name):
-            return True
-        return False
-
-    def eight_digit_date(self, day, month, year):
-        edd = str(year)
-        if month < 10:
-            edd += "0"
-        edd += str(month)
-        if day < 10:
-            edd += "0"
-        edd += str(day)
-        return edd
-
-    def mark_ordinary_task_done(self, file_path, line_num):
-
+    def mark_task_done(self, file_path, line_num):
         """Function docstring."""
 
         lines = _read_file(file_path)
@@ -173,9 +53,9 @@ class Engine:
         # TODO This should be done when reading the file -- ignore all
         #  trailing blank lines after # THE END #
         selected_task = lines[line_num]
-        if not self._file_is_dtf(file_path):
+        if not self.file_is_dtf(file_path):
             return
-        if not self._line_is_task_any(selected_task):
+        if not self.line_is_task_any(selected_task):
             return
         del lines[line_num]
         now = datetime.datetime.now()
@@ -205,7 +85,7 @@ class Engine:
                     elif lines[j][0] == self.cfg['heading_prefix']:
                         in_ttl = False
                     if (lines[j][0] in self.cfg_active_task_prefixes
-                            and self.get_task_text(lines[j]) in task
+                            and self.get_task_definition(lines[j]) in task
                             and not task_found
                             and not in_ttl):
                         linum_found = j
@@ -232,7 +112,7 @@ class Engine:
         lines = _read_file(file_path)
         selected_task = lines[line_num]
         # TODO Check that we're coming from DTF!
-        if not self._line_is_task_periodic(selected_task):
+        if not self.line_is_task_periodic(selected_task):
             return
         del lines[line_num]
         marked_task = self.cfg['for_rescheduling_task_prefix']
@@ -256,7 +136,7 @@ class Engine:
         selected_task = re.sub(r'\d{2}:\d{2}' + self.cfg_space,
                                "",
                                selected_task)
-        if not self._line_is_task_periodic(selected_task):
+        if not self.line_is_task_periodic(selected_task):
             return
         self.mark_done_at_origin(task)
         self.mark_task_for_rescheduling(mark_as_rescheduled=True)
@@ -273,8 +153,8 @@ class Engine:
         lines = _read_file(file_path)
         updated_lines = []
         for idx, line in enumerate(lines):
-            if idx == line_num and self._line_is_task_basic(line):
-                if self._line_is_task_tt(line):
+            if idx == line_num and self.line_is_task_basic(line):
+                if self.line_is_task_tt(line):
                     updated_lines.append(self.cfg['open_task_prefix']
                                          + lines[idx][1:])
                 else:
@@ -297,12 +177,12 @@ class Engine:
         for idx, line in enumerate(lines):
             if below_incoming_header:
                 processed_lines.append(line)
-            if below_task_group_header and self._line_is_task_tt(line):
+            if below_task_group_header and self.line_is_task_tt(line):
                 ttl_tasks.append(line)
-            if self._line_is_heading_incoming(line):
+            if self.line_is_heading_incoming(line):
                 below_incoming_header = True
                 processed_lines.append(line)
-            if self._line_is_heading_task_group(line):
+            if self.line_is_heading_task_group(line):
                 below_task_group_header = True
         processed_lines = ttl_tasks + [self.cfg_newline] + processed_lines
         contents = "".join(line for line in processed_lines)
@@ -317,7 +197,7 @@ class Engine:
         for file_path in self.cfg_portfolio_files:
             lines = _read_file(file_path)
             for line in lines:
-                if self._line_is_task_due(line):
+                if self.line_is_task_due(line):
                     due_tasks.append(line)
         contents = "".join(line for line in due_tasks)
         _write_file(self.cfg['booked_file'], contents)
@@ -327,7 +207,7 @@ class Engine:
         for file_path in self.cfg_portfolio_files:
             lines = _read_file(file_path)
             for line in lines:
-                if self._line_is_task_daily(line):
+                if self.line_is_task_daily(line):
                     daily_tasks.append(line)
         contents = "".join(line for line in daily_tasks)
         _write_file(self.cfg['daily_file'], contents)
@@ -337,7 +217,7 @@ class Engine:
         for file_path in self.cfg_portfolio_files:
             lines = _read_file(file_path)
             for line in lines:
-                if self._line_is_task_periodic(line):
+                if self.line_is_task_periodic(line):
                     periodic_tasks.append(line)
         contents = "".join(line for line in periodic_tasks)
         _write_file(self.cfg['periodic_file'], contents)
@@ -347,7 +227,7 @@ class Engine:
         for file_path in self.cfg_portfolio_files:
             lines = _read_file(file_path)
             for line in lines:
-                if self._line_is_task_shlist(line):
+                if self.line_is_task_shlist(line):
                     shlist_tasks.append(line)
         contents = "".join(line for line in shlist_tasks)
         _write_file(self.cfg['shlist_file'], contents)
@@ -379,7 +259,7 @@ class Engine:
         for file_path in self.cfg_portfolio_files:
             lines = _read_file(file_path)
             for line in lines:
-                if self._line_is_task_tt(line):
+                if self.line_is_task_tt(line):
                     tasks.append(line)
         return tasks
 
@@ -407,6 +287,223 @@ class Engine:
         file_name_n_ext = file_name + self.cfg['atlas_files_extension']
         shutil.copyfile(self.cfg['today_file'],
                         self.cfg['portfolio_base_dir'] + file_name_n_ext)
+
+    # Utilities
+
+    def get_task_definition(self, task):
+        """Get task definition."""
+
+        words = task.split(self.cfg_space)
+        task_text = ''
+        for word in words:
+            # Beware of special letters (and words beginning with them)
+            if (self.word_has_active_task_prefix(word)
+                    or self.word_has_property(word)
+                    or self.word_has_reserved_word_prefix(word)):
+                pass
+            else:
+                task_text += word + self.cfg_space
+        return task_text.rstrip(self.cfg_space)
+
+    def get_task_duration(self, task):
+        """Get task duration from task definition."""
+
+        words = task.split(self.cfg_space)
+        for word in words:
+            if self.cfg['dur_prop'] in word:
+                duration = int(word.split(self.cfg['time_separator'])[1])
+        return int(duration)
+
+    def get_task_due_date(self, task):
+        """Get task due date from task definition."""
+
+        words = task.split(self.cfg_space)
+        for word in words:
+            if self.cfg['due_prop'] in word:
+                datum = word.split(self.cfg['property_separator'])[1]
+                year, month, day = datum.split(self.cfg['date_separator'])
+        return datetime.datetime(int(year), int(month), int(day))
+
+    def update_due_date(self, task):
+        """Update the due date of a periodic task."""
+
+        calculate_from_due_date = False
+        words = task.split(self.cfg_space)
+        for word in words:
+            if self.cfg['due_prop'] in word:
+                due = word[4:]
+            elif self.cfg['rec_prop'] in word:
+                if self.cfg['tag_prefix'] in word:
+                    calculate_from_due_date = True
+                rec = ''
+                for char in word:
+                    if char.isnumeric():
+                        rec += char
+                rec_period = word[-1]
+        rec = int(rec)
+        year, month, day = due.split(self.cfg['date_separator'])
+        if calculate_from_due_date:
+            new_due = datetime.date(int(year), int(month), int(day))
+        else:
+            new_due = datetime.datetime.now()
+        if rec_period == self.cfg['month_symbol']:
+            new_due += relativedelta(months=rec)
+        elif rec_period == self.cfg['year_symbol']:
+            new_due += relativedelta(years=rec)
+        else:
+            new_due += relativedelta(days=rec)
+        updated_periodic_task = (re.sub(self.cfg['due_prop']
+                                        + r'\d{4}-\d{2}-\d{2}',
+                                        self.cfg['due_prop']
+                                        + new_due.strftime("%Y-%m-%d"),
+                                        task))
+        return updated_periodic_task
+
+    def mins_to_hh_mm(self, mins):
+        """Convert minutes to hours and minutes."""
+
+        hours_ = mins // 60
+        mins_ = mins % 60
+        return f"{hours_:02}{self.settings['time_separator']}{mins_:02}"
+
+    # Checkers
+
+    def file_is_dtf(self, file_path):
+        # TODO Fix assumption that folder separator is always /
+        file_name_and_ext = file_path.split('/')[-1]
+        file_name = file_name_and_ext.split('.')[0]
+        if re.match(r'\d{8}', file_name):
+            return True
+        return False
+
+    def line_is_heading(self, line):
+        if len(line) > 0 and line[0] == self.cfg['heading_prefix']:
+            return True
+        return False
+
+    def line_is_heading_ttl(self, line):
+        if self.line_is_heading(line) and self.cfg['ttl_heading'] in line:
+            return True
+        return False
+
+    def line_is_heading_incoming(self, line):
+        if self.line_is_heading(line) and self.cfg['incoming_heading'] in line:
+            return True
+        return False
+
+    def line_is_heading_task_group(self, line):
+        if (self.line_is_heading(line)
+                and not self.line_is_heading_ttl(line)
+                and not self.line_is_heading_ttl(line)):
+            return True
+        return False
+
+    def line_is_task_basic(self, line):
+        if (len(line) > 0
+                and line[0] in self.cfg_active_task_prefixes
+                and self.cfg['dur_prop'] in line
+                and self.cfg['due_prop'] not in line
+                and self.cfg['rec_prop'] not in line):
+            return True
+        return False
+
+    def line_is_task_tt(self, line):
+        if (self.line_is_task_basic(line)
+                and line[0] == self.cfg['top_task_prefix']):
+            return True
+        return False
+
+    def line_is_task_due(self, line):
+        if (len(line) > 0
+                and line[0] == self.cfg['open_task_prefix']
+                and self.cfg['dur_prop'] in line
+                and self.cfg['due_prop'] in line
+                and self.cfg['rec_prop'] not in line):
+            return True
+        return False
+
+    def line_is_task_periodic(self, line):
+        if (len(line) > 0
+                and line[0] == self.cfg['open_task_prefix']
+                and self.cfg['dur_prop'] in line
+                and self.cfg['due_prop'] in line
+                and self.cfg['rec_prop'] in line
+                and self.cfg['daily_rec_prop_val'] not in line):
+            return True
+        return False
+
+    def line_is_task_daily(self, line):
+        if (len(line) > 0
+                and line[0] == self.cfg['open_task_prefix']
+                and self.cfg['dur_prop'] in line
+                and self.cfg['due_prop'] not in line
+                and self.cfg['daily_rec_prop_val'] in line):
+            return True
+        return False
+
+    def line_is_task_any(self, line):
+        if (self.line_is_task_basic(line)
+                or self.line_is_task_tt(line)
+                or self.line_is_task_due(line)
+                or self.line_is_task_periodic(line)
+                or self.line_is_task_daily(line)):
+            return True
+        return False
+
+    def line_is_task_shlist(self, line):
+        if (len(line) > 0
+                and line[0] == self.cfg['open_task_prefix']
+                and self.cfg['dur_prop'] in line
+                and self.cfg['shlist_cat'] in line):
+            return True
+        return False
+
+    def word_has_property(self, word):
+        """Check if a property definition is contained in `word`."""
+
+        if (self.cfg['due_prop'] in word
+                or self.cfg['dur_prop'] in word
+                or self.cfg['rec_prop'] in word):
+            return True
+        return False
+
+    def word_has_active_task_prefix(self, word):
+        if (len(word) == 1
+                and word[0] in self.cfg_active_task_prefixes):
+            return True
+        return False
+
+    def word_has_reserved_word_prefix(self, word):
+        if (word
+                and word[0] in self.cfg['reserved_word_prefixes'].split('\n')):
+            return True
+        return False
+
+    # Reader and writer
+
+    @staticmethod
+    def read_file(file_path, single_string=False):
+        with open(file_path, 'r') as file_path_:
+            if single_string:
+                lines = file_path_.read()
+                # TODO Make both branches do same kind of trimming
+                lines.rstrip()
+            else:
+                lines = file_path_.readlines()
+                numof_lines_to_the_end = len(lines)
+                # for idx, line in enumerate(lines):
+                #    # TODO Fix this hard-coded constant
+                #    if "# THE END #" in line:
+                #        numof_lines_to_the_end = idx + 1
+                lines = lines[:numof_lines_to_the_end]
+        return lines
+
+    @staticmethod
+    def write_file(file_path, contents):
+        with open(file_path, 'w') as file_path_:
+            file_path_.write(contents)
+
+    # Some experimental features, not for everyday use
 
     def _move_daily_tasks_file(self):
         """In development. Do not use."""
@@ -707,156 +804,3 @@ class Engine:
                     + self.c_newline
                     + entry[self.cfg.getint('log_line_length'):])
         return entry
-
-    def get_task_duration(self, task):
-        """Get task duration from task definition.
-
-        Parameters
-        ----------
-        task : str
-            Task definition.
-
-        Returns
-        -------
-        int
-            Task duration as defined in task definition. Assumed to be in
-            minutes.
-
-        """
-
-        words = task.split(self.cfg_space)
-        for word in words:
-            if self.cfg['dur_prop'] in word:
-                duration = int(word.split(self.cfg['time_separator'])[1])
-        return int(duration)
-
-    def get_task_text(self, task):
-        words = task.split(self.cfg_space)
-        task_text = ''
-        for word in words:
-            # Beware of special letters (and words beginning with them)
-            if (self.word_has_active_task_prefix(word)
-                    or self.props_in_word(word)
-                    or self.word_has_reserved_word_prefix(word)):
-                pass
-            else:
-                task_text += word + self.cfg_space
-        return task_text.rstrip(self.cfg_space)
-
-    def get_task_due_date(self, task):
-        words = task.split(self.cfg_space)
-        for word in words:
-            if self.cfg['due_prop'] in word:
-                datum = word.split(self.cfg['property_separator'])[1]
-                year, month, day = datum.split(self.cfg['date_separator'])
-        return datetime.datetime(int(year), int(month), int(day))
-
-    def running_from_daily_tasks_file(self, tab):
-        """Check if the command is issued while a daily tasks tab is active.
-
-        :param tab widget: active tab when the command was invoked
-        :type tab: widget
-        :returns boolean:
-        """
-
-        file_name = os.path.basename(tab.path).split('.')[0]
-        if not re.match(r'\d{8}', file_name):
-            message = ("This command can only be run"
-                       "from a daily tasks file.")
-            self._view.show_message(message)
-            return False
-        return True
-
-    def mins_to_hh_mm(self, mins):
-        """Convert minutes to hours and minutes.
-
-        Convert minutes to hours and minutes; format the return string so that
-        both hours and minuts are expressed using two digits, and separated
-        using the predefined time separator symbol.
-
-        Parameters
-        ----------
-        mins : int
-            Number of minutes to convert.
-
-        Returns
-        -------
-        str
-           Formatted number of hours and minutes.
-
-        """
-
-        hours_ = mins // 60
-        mins_ = mins % 60
-        return f"{hours_:02}{self.settings['time_separator']}{mins_:02}"
-
-    def update_due_date(self, periodic_task):
-        """Update the due date of a periodic task.
-
-        Update the due date of a periodic task, based on its current due date,
-        recurrence period, and recurrence type. Today's date may also be used.
-
-        Parameters
-        ----------
-        periodic_task : str
-            Task definition.
-
-        Returns
-        -------
-        updated_periodic_task : str
-            Updated task definition.
-
-        """
-
-        calculate_from_due_date = False
-        words = periodic_task.split(self.cfg_space)
-        for word in words:
-            if self.cfg['due_prop'] in word:
-                due = word[4:]
-            elif self.cfg['rec_prop'] in word:
-                if self.cfg['tag_prefix'] in word:
-                    calculate_from_due_date = True
-                rec = ''
-                for char in word:
-                    if char.isnumeric():
-                        rec += char
-                rec_period = word[-1]
-        rec = int(rec)
-        _year, _month, _day = due.split(self.cfg['date_separator'])
-        if calculate_from_due_date:
-            new_due = datetime.date(int(_year), int(_month), int(_day))
-        else:
-            new_due = datetime.datetime.now()
-        if rec_period == self.cfg['month_symbol']:
-            new_due += relativedelta(months=rec)
-        elif rec_period == self.cfg['year_symbol']:
-            new_due += relativedelta(years=rec)
-        else:
-            new_due += relativedelta(days=rec)
-        updated_periodic_task = (re.sub(self.cfg['due_prop']
-                                 + r'\d{4}-\d{2}-\d{2}',
-                                 self.cfg['due_prop']
-                                 + new_due.strftime("%Y-%m-%d"),
-                                 periodic_task))
-        return updated_periodic_task
-
-    def props_in_word(self, word):
-        """Check if a property definition is contained in `word`."""
-
-        if (self.cfg['due_prop'] in word
-                or self.cfg['dur_prop'] in word
-                or self.cfg['rec_prop'] in word):
-            return True
-        return False
-
-    def word_has_active_task_prefix(self, word):
-        if (len(word) == 1
-                and word[0] in self.cfg_active_task_prefixes):
-            return True
-        return False
-
-    def word_has_reserved_word_prefix(self, word):
-        if (word
-                and word[0] in self.cfg['reserved_word_prefixes'].split('\n')):
-            return True
-        return False
