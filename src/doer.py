@@ -46,26 +46,22 @@ class Doer:
     # Core functionality
 
     def mark_task_done(self, file_path, line_num):
-        """Function docstring."""
+        """Mark any task done, both in DTF and at origin."""
 
-        lines = _read_file(file_path)
-        # TODO Check that the method is not called from the last line
-        # TODO This should be done when reading the file -- ignore all
-        #  trailing blank lines after # THE END #
+        lines = self.read_file(file_path)
         selected_task = lines[line_num]
-        if not self.file_is_dtf(file_path):
-            return
-        if not self.line_is_task_any(selected_task):
+        if (not self.file_is_dtf(file_path)
+                or not self.line_is_task_any(selected_task)):
             return
         del lines[line_num]
         now = datetime.datetime.now()
-        taux = self.cfg_newline
-        taux += self.cfg['done_task_prefix']
-        taux += self.cfg_space + now.strftime("%Y-%m-%d")
-        taux += self.cfg_space + selected_task
-        lines.append(taux)
+        done_task = self.cfg_newline
+        done_task += self.cfg['done_task_prefix']
+        done_task += self.cfg_space + now.strftime("%Y-%m-%d")
+        done_task += self.cfg_space + selected_task
+        lines.append(done_task)
         contents = "".join(line for line in lines)
-        _write_file(file_path, contents)
+        self.write_file(file_path, contents)
         self.mark_task_done_at_origin(selected_task)
 
     def mark_task_done_at_origin(self, task):
@@ -101,8 +97,7 @@ class Doer:
                 lines[linum_found] = (self.cfg['done_task_prefix']
                                       + self.cfg_space + lines[linum_found][2:])
             contents = "".join(line for line in lines)
-            _write_file(fpath_found, contents)
-        return
+            self.write_file(fpath_found, contents)
 
     def mark_task_for_rescheduling(self, file_path, line_num,
                                    mark_as_rescheduled=False):
@@ -140,12 +135,6 @@ class Doer:
             return
         self.mark_done_at_origin(task)
         self.mark_task_for_rescheduling(mark_as_rescheduled=True)
-
-        # TODO Consider adding an option
-        # to determine whether the user wants this done
-        # self._analyse_tasks()
-        # self._schedule_tasks()
-        return
 
     def toggle_tt(self, file_path, line_num):
         """Docstring."""
@@ -474,7 +463,7 @@ class Doer:
         return False
 
     def word_has_reserved_word_prefix(self, word):
-        if (word
+        if (len(word) > 0
                 and word[0] in self.cfg['reserved_word_prefixes'].split('\n')):
             return True
         return False
@@ -483,6 +472,7 @@ class Doer:
 
     @staticmethod
     def read_file(file_path, single_string=False):
+        # TODO Add encoding
         with open(file_path, 'r') as file_path_:
             if single_string:
                 lines = file_path_.read()
@@ -500,6 +490,7 @@ class Doer:
 
     @staticmethod
     def write_file(file_path, contents):
+        # TODO Add encoding
         with open(file_path, 'w') as file_path_:
             file_path_.write(contents)
 
