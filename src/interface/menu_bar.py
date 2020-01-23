@@ -1,13 +1,4 @@
-"""Docstring."""
-
 from PyQt5.QtWidgets import QDesktopWidget, QMenuBar
-
-
-def screen_size():
-    """Docstring."""
-
-    screen = QDesktopWidget().screenGeometry()
-    return screen.width(), screen.height()
 
 
 class MenuBar(QMenuBar):
