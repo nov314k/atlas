@@ -1,7 +1,7 @@
 import configparser
 
 
-class Configuration:
+class Config:
     def __init__(self, configuration_ini_file):
         self.config = configparser.ConfigParser(
                 interpolation=configparser.ExtendedInterpolation())

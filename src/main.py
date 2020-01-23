@@ -7,14 +7,14 @@ from PyQt5.QtWidgets import QApplication
 
 from pathlib import Path
 
-from src.configuration import Configuration
-from src.engine.doer import Doer
+from src.config import Config
+from src.doer import Doer
 from src.interface.top_level_window import TopLevelWindow
 
 
 def run():
     logging.basicConfig(
-        filename='atlas.log', level=logging.DEBUG,
+        filename='../log/atlas.log', level=logging.DEBUG,
         format='%(asctime)s:%(name)s:%(levelname)s:%(message)s')
     logging.info("Starting Atlas")
 
@@ -31,7 +31,7 @@ def run():
     palette.setColor(QPalette.Button, QColor(128, 128, 00))
     app.setPalette(palette)
 
-    config = Configuration(Path(portfolio_file))
+    config = Config(Path(portfolio_file))
     engine = Doer(config)
     interface = TopLevelWindow(config, engine)
 
