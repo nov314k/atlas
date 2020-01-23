@@ -1,16 +1,13 @@
-"""Docstring."""
+"""Graphical interface to the Atlas Doer."""
 
 import os
 import datetime
-import re
 import sys
 
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import (QAction, QDesktopWidget, QWidget, QVBoxLayout,
-                             QTabWidget, QFileDialog, QMessageBox, QMainWindow,
-                             QShortcut)
-from PyQt5.QtGui import QKeySequence
 from PyQt5.QtGui import QIcon
+from PyQt5.QtWidgets import (QAction, QDesktopWidget, QWidget, QVBoxLayout,
+                             QTabWidget, QFileDialog, QMessageBox, QMainWindow)
 from pkg_resources import resource_filename
 from src.interface.prepare_day_dialog import PrepareDayDialog
 from src.interface.log_progress_dialog import LogProgressDialog
@@ -21,13 +18,13 @@ from src.interface.file_tabs import FileTabs
 
 
 class TopLevelWindow(QMainWindow):
-    """Docstring."""
+    """Top level window. """
 
     # open_file = pyqtSignal(str)
     # previous_folder = None
 
     def __init__(self, config, doer, parent=None):
-        """TopLevelWindow init."""
+        """TopLevelWindow initialization."""
 
         super().__init__(parent)
 
@@ -59,7 +56,7 @@ class TopLevelWindow(QMainWindow):
         self.setTabPosition(Qt.AllDockWidgetAreas, QTabWidget.North)
 
     def setup_menu_bar(self):
-        """Set up horizontal drop-down menu bar."""
+        """Set up drop-down menu bar."""
 
         menu_bar = self.menuBar()
 
@@ -94,11 +91,12 @@ class TopLevelWindow(QMainWindow):
         save_file.triggered.connect(self.file_save)
 
         save_file_as = QAction("Save file &as", self)
+        save_file_as.setShortcut("Ctrl+Shift+A")
         file_menu.addAction(save_file_as)
         save_file_as.triggered.connect(self.file_save_as)
 
         save_file_all = QAction("Save all files", self)
-        open_file.setShortcut("Ctrl+Shift+S")
+        save_file_all.setShortcut("Ctrl+Shift+S")
         file_menu.addAction(save_file_all)
         save_file_all.triggered.connect(self.file_save_all)
 
@@ -262,6 +260,14 @@ class TopLevelWindow(QMainWindow):
             self.cfg['atlas_file_extension_for_saving'])
         return path
 
+    def update_top_window_title(self, filename=None):
+        """Docstring."""
+
+        title = self.cfg['top_window_title']
+        if filename:
+            title += " - " + filename
+        self.setWindowTitle(title)
+
     @staticmethod
     def read_file(file_path, single_string=False):
         with open(file_path, 'r') as file_path_:
@@ -278,18 +284,15 @@ class TopLevelWindow(QMainWindow):
         screen = QDesktopWidget().screenGeometry()
         return screen.width(), screen.height()
 
-    def update_top_window_title(self, filename=None):
-        """Docstring."""
-
-        title = self.cfg['top_window_title']
-        if filename:
-            title += " - " + filename
-        self.setWindowTitle(title)
+    @staticmethod
+    def write_file(self, file_path, contents):
+        with open(file_path, 'w', encoding=self.cfg['encoding']) as file_path_:
+            file_path_.write(contents)
 
     # Portfolio menu commands
 
     def portfolio_open(self):
-        """Function docstring."""
+        """Open portfolio files, and today's DTF if available."""
 
         for file_path in self.cfg_tab_order:
             self.file_open(file_path)
@@ -300,25 +303,26 @@ class TopLevelWindow(QMainWindow):
             self.file_open(self.cfg['portfolio_base_dir'] + file_name_n_ext)
 
     def portfolio_reload_currently_open_tabs(self):
+        """Reload all currently open tabs."""
+
+        selected_tab = self.current_tab
+        selected_row = selected_tab.getCursorPosition()[0]
+        selected_tab_idx = self.tabs.indexOf(selected_tab)
+        first_visible_line = selected_tab.firstVisibleLine()
         for tab in self.widgets:
             contents = self.read_file(tab.path, single_string=True)
             tab.setText(contents)
+        self.tabs.setCurrentIndex(selected_tab_idx)
+        selected_tab.setFirstVisibleLine(first_visible_line)
+        selected_tab.setCursorPosition(selected_row, 0)
 
     def portfolio_quit(self):
-        """Quit Atlas.
-
-        Confirm if and how the user wants to save changes. Saves session
-        settings before exiting.
-
-        """
+        """Confirm if user wants to save changes before quitting."""
 
         for tab in self.widgets:
-            current_tab_index = self.tabs.indexOf(tab)
-            self.tabs.setCurrentIndex(current_tab_index)
-            user_chose_yes_or_no = self.file_close()
-            if not user_chose_yes_or_no:
-                return
-        # self.save_session_settings()
+            tab_index = self.tabs.indexOf(tab)
+            self.tabs.setCurrentIndex(tab_index)
+            self.file_close()
         sys.exit(0)
 
     # File menu commands
@@ -326,9 +330,9 @@ class TopLevelWindow(QMainWindow):
     def file_new(self):
         """Add a new tab."""
 
-        self.add_tab(None, "", self.c_newline)
+        self.add_tab(None, "")
     
-    def file_open(self, path=None):
+    def file_open(self, file_path=None):
         """Open a file from disk in a new tab.
 
         If `path` is not specified, it displays a dialog for the user to choose
@@ -336,39 +340,35 @@ class TopLevelWindow(QMainWindow):
 
         Parameters
         ----------
-        path : str
+        file_path : str
             Path to save tab contents to.
 
         """
 
         # Get the path from the user if it's not defined
-        if not path:
-            path = self.get_open_file_path()
+        if file_path is None:
+            file_path = self.get_open_file_path()
         # Was the dialog canceled?
-        if not path:
+        if file_path is None:
             return
         # Do not open a life area if it is already open
         for widget in self.widgets:
-            if os.path.samefile(path, widget.path):
+            if os.path.samefile(file_path, widget.path):
                 msg = "'{}' is already open."
-                self.show_message(msg.format(os.path.basename(path)))
+                self.show_message(msg.format(os.path.basename(file_path)))
                 self.focus_tab(widget)
                 return
-        file_content = ''
-        with open(path, encoding=self.cfg['encoding']) as faux:
-            lines = faux.readlines()
-            for line in lines:
-                file_content += line
-        self.add_tab(path, file_content)
+        contents = self.read_file(file_path, single_string=True)
+        self.add_tab(file_path, contents)
 
     def file_save(self, file_path=None, tab=None):
-        """Save file contained in a tab to disk.
+        """Save file in selected tab to disk.
 
         If `tab` is not specified, it assumes that we want to save the file
-        contained in the currently active tab. If it is a newly added tab
-        not save before (and hence a file does not exist on disk), a dialog is
-        displayed to choose the save path. Even though the path of a tab is
-        contained in the tab, due to different usage scenarios for this
+        contained in the currently selected tab. If it is a newly added tab,
+        not saved before (and hence a file does not exist on disk), a dialog
+        is displayed to choose the save path. Even though the path of a tab
+        is contained in the tab, due to different usage scenarios for this
         function, it is best to keep these two parameters separate.
 
         Parameters
@@ -390,18 +390,11 @@ class TopLevelWindow(QMainWindow):
             if tab.path is None:
                 return
             file_path = tab.path
-        with open(file_path, 'w', encoding=self.cfg['encoding']) as file_path_:
-            file_path_.writelines(tab.text())
+        self.write_file(self, file_path, tab.text())
         tab.setModified(False)
 
     def file_save_as(self):
-        """Save file in active tab to a different path.
-
-        After getting the new path, it checks if the new path is already open.
-        If it is not open, calls `self.save_file()` with the new file name
-        provided.
-
-        """
+        """Save file in selected tab to a different file path."""
 
         file_path = self.get_save_file_path()
         if file_path is None:
@@ -416,7 +409,7 @@ class TopLevelWindow(QMainWindow):
         self.file_save(file_path=file_path)
 
     def file_save_all(self):
-        """Docstring."""
+        """Save all open tabs."""
 
         selected_tab = self.current_tab
         selected_row = selected_tab.getCursorPosition()[0]
@@ -431,96 +424,87 @@ class TopLevelWindow(QMainWindow):
         selected_tab.setCursorPosition(selected_row, 0)
 
     def file_close(self):
-        """Close the current file (remove the current tab).
+        """Close the current file (remove the current tab)."""
 
-        Returning `False` indicates that the user, when answering to the
-        question, chose 'Cancel'. Returning `True` indicates that the user
-        answered with either 'Yes' or 'No'. This is primarily used by `quit()`
-        to indicate whether to abort the quitting process if a user choses
-        'Cancel'. If a user choses 'Cancel', they decide that they want to deal
-        with the changes in the file in the normal program operation mode
-        ('manually').
-
-        """
-
-        current_tab = self.current_tab
-        current_tab_idx = self.tabs.indexOf(current_tab)
-        if current_tab.isModified():
+        selected_tab = self.current_tab
+        selected_tab_idx = self.tabs.indexOf(selected_tab)
+        if selected_tab.path is None:
+            self.file_save_as()
+        if selected_tab.path is None:
+            return
+        if selected_tab.isModified():
             answer = self.show_yes_no_question(
                 "Do you want to save changes to the file before closing?",
-                "File:    " + current_tab.path)
+                "File:    " + selected_tab.path)
             if answer == QMessageBox.Yes:
-                self.save_file()
+                self.file_save()
             if answer == QMessageBox.Cancel:
-                return False
-        self.tabs.removeTab(current_tab_idx)
-        return True
+                return
+        self.tabs.removeTab(selected_tab_idx)
 
     # Move menu commands
 
     def goto_tab_left(self):
         """Change focus to one tab left. Allows for wrapping around."""
 
-        tab = self.current_tab
-        index = self.tabs.indexOf(tab)
-        if index-1 < 0:
-            tab_left_idx = self.tab_count - 1
+        selected_tab = self.current_tab
+        selected_tab_idx = self.tabs.indexOf(selected_tab)
+        if selected_tab_idx - 1 < 0:
+            tab_to_left_idx = self.tab_count - 1
         else:
-            tab_left_idx = index - 1
-        self.tabs.setCurrentIndex(tab_left_idx)
+            tab_to_left_idx = selected_tab_idx - 1
+        self.tabs.setCurrentIndex(tab_to_left_idx)
 
     def goto_tab_right(self):
         """Change focus to one tab right. Allows for wrapping around."""
 
-        tab = self.current_tab
-        index = self.tabs.indexOf(tab)
-        if index+1 > self.tab_count-1:
-            tab_right_idx = 0
+        selected_tab = self.current_tab
+        selected_tab_idx = self.tabs.indexOf(selected_tab)
+        if selected_tab_idx + 1 > self.tab_count-1:
+            tab_to_right_idx = 0
         else:
-            tab_right_idx = index + 1
-        self.tabs.setCurrentIndex(tab_right_idx)
+            tab_to_right_idx = selected_tab_idx + 1
+        self.tabs.setCurrentIndex(tab_to_right_idx)
 
     def move_line_up(self):
-        """Move current line of text one row up."""
+        """Swap the current (selected) row with the one above it."""
 
-        tab = self.current_tab
-        first_visible_line = tab.firstVisibleLine()
-        tasks = tab.text().split('\n')
-        row = tab.getCursorPosition()[0]
-        if row > 0:
-            for i, _ in enumerate(tasks):
-                if i == row - 1:
-                    temp = tasks[i]
-                    tasks[i] = tasks[i + 1]
-                    tasks[i + 1] = temp
-            contents = ""
-            for task in tasks:
-                contents += task + self.c_newline
-            contents = contents.rstrip(self.c_newline)
-            tab.SendScintilla(tab.SCI_SETTEXT, contents.encode(self.cfg['encoding']))
-            tab.setFirstVisibleLine(first_visible_line)
-            tab.setCursorPosition(row - 1, 0)
+        selected_tab = self.current_tab
+        selected_row = selected_tab.getCursorPosition()[0]
+        first_visible_line = selected_tab.firstVisibleLine()
+        lines = selected_tab.text().split(self.cfg_newline)
+        if selected_row > 0:
+            for idx, _ in enumerate(lines):
+                if idx == selected_row - 1:
+                    temp_line = lines[idx]
+                    lines[idx] = lines[idx + 1]
+                    lines[idx + 1] = temp_line
+            contents = "".join(line + self.cfg_newline for line in lines)
+            contents = contents[:-1]
+            selected_tab.SendScintilla(selected_tab.SCI_SETTEXT,
+                                       contents.encode(self.cfg['encoding']))
+            selected_tab.setFirstVisibleLine(first_visible_line)
+            selected_tab.setCursorPosition(selected_row - 1, 0)
 
     def move_line_down(self):
-        """Move current line of text one row down."""
+        """Swap the current (selected) row with the one below it."""
 
-        tab = self.current_tab
-        first_visible_line = tab.firstVisibleLine()
-        tasks = tab.text().split(self.c_newline)
-        row = tab.getCursorPosition()[0]
-        if row < len(tasks) - 1:
-            for i in range(len(tasks) - 1, -1, -1):
-                if i == row + 1:
-                    temp = tasks[i]
-                    tasks[i] = tasks[i - 1]
-                    tasks[i - 1] = temp
-            contents = ""
-            for task in tasks:
-                contents += task + self.c_newline
-            contents = contents.rstrip(self.c_newline)
-            tab.SendScintilla(tab.SCI_SETTEXT, contents.encode(self.cfg['encoding']))
-            tab.setFirstVisibleLine(first_visible_line)
-            tab.setCursorPosition(row + 1, 0)
+        selected_tab = self.current_tab
+        selected_row = selected_tab.getCursorPosition()[0]
+        first_visible_line = selected_tab.firstVisibleLine()
+        lines = selected_tab.text().split(self.cfg_newline)
+        if selected_row < len(lines) - 1:
+            for idx in range(len(lines) - 1, -1, -1):
+                if idx == selected_row + 1:
+                    temp_line = lines[idx]
+                    lines[idx] = lines[idx - 1]
+                    lines[idx - 1] = temp_line
+            contents = "".join(line + self.cfg_newline for line in lines)
+            contents = contents.rstrip(self.cfg_newline)
+            selected_tab.SendScintilla(selected_tab.SCI_SETTEXT,
+                                       contents.encode(self.cfg['encoding']))
+            selected_tab.setFirstVisibleLine(first_visible_line)
+            selected_tab.setCursorPosition(selected_row + 1, 0)
 
     # Task menu commands
 
@@ -671,11 +655,11 @@ class TopLevelWindow(QMainWindow):
     # Show messages and dialogs
 
     def show_message(self, message, information=None, icon=None):
-        """Docstring."""
+        """Show message box."""
 
         message_box = QMessageBox(self)
         message_box.setText(message)
-        message_box.setWindowTitle("Atlas")
+        message_box.setWindowTitle(self.cfg['top_window_title'])
         if information:
             message_box.setInformativeText(information)
         if icon and hasattr(message_box, icon):
@@ -685,11 +669,11 @@ class TopLevelWindow(QMainWindow):
         message_box.exec()
 
     def show_confirmation(self, message, information=None, icon=None):
-        """Docstring."""
+        """Show confirmation box, with OK and Cancel buttons."""
 
         message_box = QMessageBox(self)
         message_box.setText(message)
-        message_box.setWindowTitle("Atlas")
+        message_box.setWindowTitle(self.cfg['top_window_title'])
         if information:
             message_box.setInformativeText(information)
         if icon and hasattr(message_box, icon):
@@ -701,17 +685,10 @@ class TopLevelWindow(QMainWindow):
         return message_box.exec()
 
     def show_yes_no_question(self, message, information=None):
-        """Ask the user a yes/no/cancel question.
-
-        Answering 'Yes' allows for performing a certain action; answering 'No'
-        allows for not performing the same action. Answering with 'Cancel'
-        aborts the question and goes back to normal program operation mode so
-        that the user can make their decision in that mode before proceeding.
-
-        """
+        """Ask the user a yes/no/cancel question."""
 
         message_box = QMessageBox(self)
-        message_box.setWindowTitle("Atlas")
+        message_box.setWindowTitle(self.cfg['top_window_title'])
         message_box.setText(message)
         if information:
             message_box.setInformativeText(information)
@@ -721,15 +698,16 @@ class TopLevelWindow(QMainWindow):
         message_box.setDefaultButton(message_box.Yes)
         return message_box.exec()
 
-    def show_prepare_day_plan_dialog(self, target_day, target_month, target_year):
-        """Docstring."""
+    def show_prepare_day_plan_dialog(self, proposed_day, proposed_month,
+                                     proposed_year):
+        """Show prepare day dialog, with proposed target day/month/year."""
 
-        # ~ finder = FindReplaceDialog(self)
-        finder = PrepareDayDialog(self)
-        finder.setup(target_day, target_month, target_year)
-        if finder.exec():
-            return (finder.target_day(), finder.target_month(),
-                    finder.target_year())
+        prepare_day_dialog = PrepareDayDialog(self)
+        prepare_day_dialog.setup(proposed_day, proposed_month, proposed_year)
+        if prepare_day_dialog.exec():
+            return (prepare_day_dialog.target_day(),
+                    prepare_day_dialog.target_month(),
+                    prepare_day_dialog.target_year())
         return None
 
     def _show_log_progress_dialog(self):
