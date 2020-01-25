@@ -38,15 +38,24 @@ class Doer:
         """Doer initialization."""
 
         self.cfg = config.cfg
-        self.cfg_space = config.cfg_space
-        self.cfg_newline = config.cfg_newline
-        self.cfg_portfolio_files = config.cfg_portfolio_files
-        self.cfg_active_task_prefixes = config.cfg_active_task_prefixes
 
     # Core functionality
 
     def mark_task_done(self, file_path, line_num):
-        """Mark any task done, both in DTF and at origin."""
+        """Mark any task done in daily tasks file and at origin.
+
+        It can only be called from a daily tasks file. It works for all four
+        types of tasks: basic, booked, periodic, and daily. There are some
+        differences in the way in which different types of tasks are marked
+        as done at origin. Origin simply means the task group file in which
+        the task was defined.
+
+        Illustratively: It adds 'x YYYY-MM-DD ' prefix to the task and moves
+        to the end of the daily tasks file. It calls
+        `mark_task_done_at_origin()` to do the rest of the work in a relevant
+        task group file.
+
+        """
 
         lines = self.read_file(file_path)
         selected_task = lines[line_num]
@@ -54,115 +63,152 @@ class Doer:
                 or not self.line_is_task_any(selected_task)):
             return
         del lines[line_num]
-        now = datetime.datetime.now()
-        done_task = self.cfg_newline
-        done_task += self.cfg['done_task_prefix']
-        done_task += self.cfg_space + now.strftime("%Y-%m-%d")
-        done_task += self.cfg_space + selected_task
+        now_ = datetime.datetime.now()
+        done_task = (f"{self.cfg['done_task_prefix']}"
+                     f"{self.cfg_space}"
+                     f"{now_.strftime('%Y-%m-%d')}"
+                     f"{self.cfg_space}"
+                     f"{selected_task}")
         lines.append(done_task)
-        contents = "".join(line for line in lines)
-        self.write_file(file_path, contents)
+        self.write_file(file_path, lines)
         self.mark_task_done_at_origin(selected_task)
 
     def mark_task_done_at_origin(self, task):
-        """Function docstring."""
+        """Mark task as done in the task group file where it was defined.
 
-        for fpath in self.cfg_portfolio_files:
-            lines = _read_file(fpath)
+        Searches the task group files to find where the task was defined. It
+        stops looking after it finds the first occurrence. Searching is done
+        on the basis of task directive. It only looks through tasks in the
+        main body of the task group file (below TTL and INCOMING tasks). Search
+        order is as defined in `cfg['portfolio_files']`. As opposed to
+        marking a task done in a daily tasks file, where they are moved to
+        the end of the file, it marks tasks done in-place, without changing
+        the position of the task in the task group file.
+
+        For basic and booked tasks it simply replaces existing prefix with
+        the done task prefix, without adding the date of completion (as it is
+        done on the daily tasks file). For periodic tasks, it updates the due
+        date to the next due date, without changing the prefix (using the
+        `task_update_due_date()` method. It does not modify daily tasks (as there is
+        no point in doing that).
+
+        TODO Make sure (for periodic tasks) new due date is after current date.
+
+        """
+
+        for file_path in self.cfg_portfolio_files:
+            lines = self.read_file(file_path)
             in_ttl = False
-            linum_found = -1
             task_found = False
-            fpath_found = None
-            for j, _ in enumerate(lines):
-                if lines[j]:
-                    if (lines[j][0] == self.cfg['heading_prefix']
-                            and self.cfg['ttl_heading'] in lines[j]):
-                        in_ttl = True
-                    elif lines[j][0] == self.cfg['heading_prefix']:
-                        in_ttl = False
-                    if (lines[j][0] in self.cfg_active_task_prefixes
-                            and self.get_task_definition(lines[j]) in task
-                            and not task_found
-                            and not in_ttl):
-                        linum_found = j
-                        task_found = True
-                        fpath_found = fpath
-                        break
+            selected_row = -1
+            selected_task = None
+            selected_file_path = None
+            for idx, line in enumerate(lines):
+                if self.line_is_heading_ttl(line):
+                    in_ttl = True
+                elif self.line_is_heading(line):
+                    in_ttl = False
+                if (self.line_is_task_basic_due_periodic(line)
+                        and self.get_task_definition(line) in task
+                        and not task_found
+                        and not in_ttl):
+                    task_found = True
+                    selected_row = idx
+                    selected_task = line
+                    selected_file_path = file_path
+                    break
             if task_found:
-                break
-        if linum_found > -1:
-            if self.cfg['rec_prop'] in lines[linum_found]:
-                lines[linum_found] = self.update_due_date(lines[linum_found])
-            else:
-                lines[linum_found] = (self.cfg['done_task_prefix']
-                                      + self.cfg_space + lines[linum_found][2:])
-            contents = "".join(line for line in lines)
-            self.write_file(fpath_found, contents)
+                if self.line_is_task_periodic(selected_task):
+                    lines[selected_row] = self.task_update_due_date(
+                        lines[selected_row])
+                else:
+                    # NOTE `1:` removes old task prefix
+                    lines[selected_row] = (f"{self.cfg['done_task_prefix']}"
+                                           f"{lines[selected_row][1:]}")
+            self.write_file(selected_file_path, lines)
 
     def mark_task_for_rescheduling(self, file_path, line_num,
                                    mark_as_rescheduled=False):
-        """Function docstring."""
+        """Mark task for rescheduling.
 
-        now = datetime.datetime.now()
-        lines = _read_file(file_path)
+        It only works for periodic tasks, and it can only be called from a
+        daily tasks file. `mark_as_rescheduled=True`, allows re-using this
+        method when we are rescheduling a periodic tasks.
+
+        Illustratively: It adds 'r' prefix and moves task to the end of the
+        file. Instead of 'r', it adds 'R' in the case of
+        `mark_as_rescheduled=True`.
+
+        """
+
+        now_ = datetime.datetime.now()
+        lines = self.read_file(file_path)
         selected_task = lines[line_num]
-        # TODO Check that we're coming from DTF!
-        if not self.line_is_task_periodic(selected_task):
+        if (not self.file_is_dtf(file_path)
+                or not self.line_is_task_periodic(selected_task)):
             return
         del lines[line_num]
-        marked_task = self.cfg['for_rescheduling_task_prefix']
+        prefix = self.cfg['for_rescheduling_task_prefix']
         if mark_as_rescheduled:
-             marked_task = self.cfg['rescheduled_periodic_task_prefix']
-        marked_task += (self.cfg_space
-                        + now.strftime("%Y-%m-%d")
-                        + self.cfg_space
-                        + selected_task)
+            prefix = self.cfg['rescheduled_periodic_task_prefix']
+        marked_task = (f"{prefix}"
+                       f"{self.cfg_space}"
+                       f"{now_.strftime('%Y-%m-%d')}"
+                       f"{self.cfg_space}"
+                       f"{selected_task}")
         lines.append(marked_task)
-        contents = "".join(line for line in lines)
-        _write_file(file_path, contents)
-        return contents
+        self.write_file(file_path, lines)
 
     def reschedule_periodic_task(self, file_path, line_num):
-        """Function docstring."""
+        """Reschedule a periodic task.
 
-        lines = _read_file(file_path)
+        Updates the due date of a periodic task at its origin (task group
+        file). It marks the task as having been rescheduled in the daily
+        tasks file.
+
+        """
+
+        lines = self.read_file(file_path)
         selected_task = lines[line_num]
         del lines[line_num]
-        selected_task = re.sub(r'\d{2}:\d{2}' + self.cfg_space,
-                               "",
-                               selected_task)
         if not self.line_is_task_periodic(selected_task):
             return
-        self.mark_done_at_origin(task)
+        self.mark_task_done_at_origin(selected_task)
         self.mark_task_for_rescheduling(mark_as_rescheduled=True)
 
     def toggle_tt(self, file_path, line_num):
-        """Docstring."""
+        """Toggle the top task and open task prefixes.
 
-        lines = _read_file(file_path)
-        updated_lines = []
+        It only works for basic and top tasks.
+
+        """
+
+        lines = self.read_file(file_path)
+        processed_lines = []
         for idx, line in enumerate(lines):
             if idx == line_num and self.line_is_task_basic(line):
                 if self.line_is_task_tt(line):
-                    updated_lines.append(self.cfg['open_task_prefix']
-                                         + lines[idx][1:])
+                    processed_lines.append((f"{self.cfg['open_task_prefix']}"
+                                            f"{lines[idx][1:]}"))
                 else:
-                    updated_lines.append(self.cfg['top_task_prefix']
-                                         + lines[idx][1:])
+                    processed_lines.append((f"{self.cfg['top_task_prefix']}"
+                                            f"{lines[idx][1:]}"))
             else:
-                updated_lines.append(lines[idx])
-        contents = "".join(line for line in updated_lines)
-        _write_file(file_path, contents)
+                processed_lines.append(lines[idx])
+        self.write_file(file_path, processed_lines)
 
     def generate_ttl(self, file_path):
-        """Generate Top Tasks List (TTL)"""
+        """Generate the top tasks list (TTL) for the given task group."""
 
-        lines = _read_file(file_path)
+        lines = self.read_file(file_path)
         processed_lines = []
         below_incoming_header = False
         below_task_group_header = False
-        ttl_tasks = [self.cfg['heading_prefix'] + self.cfg_space + self.cfg[
-            'ttl_heading'], self.cfg_newline, self.cfg_newline]
+        ttl_tasks = [(f"{self.cfg['heading_prefix']}" 
+                      f"{self.cfg_space}" 
+                      f"{self.cfg['ttl_heading']}"),
+                     self.cfg_newline,
+                     self.cfg_newline]
         for idx, line in enumerate(lines):
             if below_incoming_header:
                 processed_lines.append(line)
@@ -174,118 +220,151 @@ class Doer:
             if self.line_is_heading_task_group(line):
                 below_task_group_header = True
         processed_lines = ttl_tasks + [self.cfg_newline] + processed_lines
-        contents = "".join(line for line in processed_lines)
-        _write_file(file_path, contents)
+        self.write_file(file_path, processed_lines)
 
     def generate_ttls(self):
+        """Generate a top tasks list for each task group file in portfolio."""
+
         for file_path in self.cfg_portfolio_files:
             self.generate_ttl(file_path)
 
     def extract_booked(self):
-        due_tasks = []
+        """Extract booked tasks into their auxiliary file."""
+
+        booked_tasks = []
         for file_path in self.cfg_portfolio_files:
-            lines = _read_file(file_path)
+            lines = self.read_file(file_path)
             for line in lines:
-                if self.line_is_task_due(line):
-                    due_tasks.append(line)
-        contents = "".join(line for line in due_tasks)
-        _write_file(self.cfg['booked_file'], contents)
+                if self.line_is_task_booked(line):
+                    booked_tasks.append(line)
+        self.write_file(self.cfg['booked_file'], booked_tasks)
 
     def extract_daily(self):
+        """Extract daily tasks into their auxiliary file."""
+
         daily_tasks = []
         for file_path in self.cfg_portfolio_files:
-            lines = _read_file(file_path)
+            lines = self.read_file(file_path)
             for line in lines:
                 if self.line_is_task_daily(line):
                     daily_tasks.append(line)
-        contents = "".join(line for line in daily_tasks)
-        _write_file(self.cfg['daily_file'], contents)
+        self.write_file(self.cfg['daily_file'], daily_tasks)
 
     def extract_periodic(self):
+        """Extract periodic tasks into their auxiliary file."""
+
         periodic_tasks = []
         for file_path in self.cfg_portfolio_files:
-            lines = _read_file(file_path)
+            lines = self.read_file(file_path)
             for line in lines:
                 if self.line_is_task_periodic(line):
                     periodic_tasks.append(line)
-        contents = "".join(line for line in periodic_tasks)
-        _write_file(self.cfg['periodic_file'], contents)
+        self.write_file(self.cfg['periodic_file'], periodic_tasks)
 
     def extract_shlist(self):
+        """Extract shlist tasks into their auxiliary file."""
+
         shlist_tasks = []
         for file_path in self.cfg_portfolio_files:
-            lines = _read_file(file_path)
+            lines = self.read_file(file_path)
             for line in lines:
                 if self.line_is_task_shlist(line):
                     shlist_tasks.append(line)
-        contents = "".join(line for line in shlist_tasks)
-        _write_file(self.cfg['shlist_file'], contents)
+        self.write_file(self.cfg['shlist_file'], shlist_tasks)
 
     def extract_auxiliaries(self):
+        """Generate all auxiliary files."""
         self.extract_booked()
         self.extract_daily()
         self.extract_periodic()
         self.extract_shlist()
 
-    def collect_tasks_for_date(self, day, month, year):
+    def collect_tasks_for_date(self, year, month, day):
+        """Collect all tasks to be done on a given date.
+
+        Tasks from each of the four task categories are gathered into a list.
+
+        """
+
         tasks = []
         day_for_planning = datetime.datetime(year, month, day)
+
         # Add daily tasks
-        daily_tasks = _read_file(self.cfg['daily_file'])
+        daily_tasks = self.read_file(self.cfg['daily_file'])
         for task in daily_tasks:
             tasks.append(task)
+
         # Add booked (due) tasks
-        due_tasks = _read_file(self.cfg['booked_file'])
+        due_tasks = self.read_file(self.cfg['booked_file'])
         for task in due_tasks:
-            if self.get_task_due_date(task) <= day_for_planning:
+            if self.get_task_due_value(task) <= day_for_planning:
                 tasks.append(task)
+
         # Add periodic tasks
-        periodic_tasks = _read_file(self.cfg['periodic_file'])
+        periodic_tasks = self.read_file(self.cfg['periodic_file'])
         for task in periodic_tasks:
-            if self.get_task_due_date(task) <= day_for_planning:
+            if self.get_task_due_value(task) <= day_for_planning:
                 tasks.append(task)
+
         # Add top tasks
         for file_path in self.cfg_portfolio_files:
-            lines = _read_file(file_path)
+            lines = self.read_file(file_path)
             for line in lines:
                 if self.line_is_task_tt(line):
                     tasks.append(line)
         return tasks
 
     def order_tasks_for_date(self, tasks):
+        """Order collected tasks as per the configured sorting order.
+
+        Once tasks are collected for a particular date using
+        `collect_tasks_for_date()`, order (sort) them in the order defined
+        in `cfg['tokens_in_sorting_order']`.
+
+        """
+
         ordered_tasks = []
         already_processed_tasks = []
-        for token in self.cfg['tokens_in_sorting_order'].split('\n'):
+        for token in self.cfg_tokens_in_sorting_order:
             for task in tasks:
                 if token in task and task not in already_processed_tasks:
                     ordered_tasks.append(task)
                     already_processed_tasks.append(task)
         return ordered_tasks
 
-    def prepare_day_plan(self, day, month, year):
+    def prepare_daily_tasks_file(self, year, month, day):
+        """Prepare daily tasks file for the given date.
+        
+        It generated fresh top tasks lists for each portfolio task group 
+        file, and it extracts all auxiliary files anew.
+        
+        TODO Consider not saving to the "today" file (as in todo.txt)
+        
+        """
+
         self.generate_ttls()
         self.extract_auxiliaries()
-        tasks_for_date = self.collect_tasks_for_date(day, month, year)
+        tasks_for_date = self.collect_tasks_for_date(year, month, day)
         ordered_tasks = self.order_tasks_for_date(tasks_for_date)
         with open(self.cfg['today_file'], 'w') as today_file_:
-            print("# Daily task list", file=today_file_)
+            print(self.cfg['daily_tasks_file_heading'], file=today_file_)
             for task in ordered_tasks:
-                print(task[:-1], file=today_file_)
-            print("# Tasks DONE", file=today_file_)
-        file_name = self.eight_digit_date(day, month, year)
-        file_name_n_ext = file_name + self.cfg['atlas_files_extension']
-        shutil.copyfile(self.cfg['today_file'],
-                        self.cfg['portfolio_base_dir'] + file_name_n_ext)
+                print(task.rstrip(self.cfg_newline), file=today_file_)
+            print(self.cfg['done_tasks_and_log_heading'], file=today_file_)
+        file_name = f"{year}{month:02}{day:02}"
+        file_name_n_ext = f"{file_name}{self.cfg['atlas_files_extension']}"
+        file_path = f"{self.cfg['portfolio_base_dir']}{file_name_n_ext}"
+        shutil.copyfile(self.cfg['today_file'], file_path)
 
     # Utilities
 
     def get_task_definition(self, task):
-        """Get task definition."""
+        """Get task directive from task definition."""
 
         words = task.split(self.cfg_space)
         task_text = ''
         for word in words:
-            # Beware of special letters (and words beginning with them)
+            # Beware of special letters (and words beginning with them)!
             if (self.word_has_active_task_prefix(word)
                     or self.word_has_property(word)
                     or self.word_has_reserved_word_prefix(word)):
@@ -301,9 +380,9 @@ class Doer:
         for word in words:
             if self.cfg['dur_prop'] in word:
                 duration = int(word.split(self.cfg['time_separator'])[1])
-        return int(duration)
+                return int(duration)
 
-    def get_task_due_date(self, task):
+    def get_task_due_value(self, task):
         """Get task due date from task definition."""
 
         words = task.split(self.cfg_space)
@@ -311,53 +390,49 @@ class Doer:
             if self.cfg['due_prop'] in word:
                 datum = word.split(self.cfg['property_separator'])[1]
                 year, month, day = datum.split(self.cfg['date_separator'])
-        return datetime.datetime(int(year), int(month), int(day))
+                return datetime.datetime(int(year), int(month), int(day))
 
-    def update_due_date(self, task):
-        """Update the due date of a periodic task."""
-
-        calculate_from_due_date = False
+    def get_task_rec_value(self, task):
         words = task.split(self.cfg_space)
         for word in words:
-            if self.cfg['due_prop'] in word:
-                due = word[4:]
-            elif self.cfg['rec_prop'] in word:
-                if self.cfg['tag_prefix'] in word:
-                    calculate_from_due_date = True
-                rec = ''
-                for char in word:
-                    if char.isnumeric():
-                        rec += char
-                rec_period = word[-1]
-        rec = int(rec)
-        year, month, day = due.split(self.cfg['date_separator'])
-        if calculate_from_due_date:
-            new_due = datetime.date(int(year), int(month), int(day))
-        else:
-            new_due = datetime.datetime.now()
-        if rec_period == self.cfg['month_symbol']:
-            new_due += relativedelta(months=rec)
-        elif rec_period == self.cfg['year_symbol']:
-            new_due += relativedelta(years=rec)
-        else:
-            new_due += relativedelta(days=rec)
-        updated_periodic_task = (re.sub(self.cfg['due_prop']
-                                        + r'\d{4}-\d{2}-\d{2}',
-                                        self.cfg['due_prop']
-                                        + new_due.strftime("%Y-%m-%d"),
-                                        task))
-        return updated_periodic_task
+            if self.cfg['rec_prop'] in word:
+                rec_value = word.split(self.cfg['property_separator'])[1]
+                return rec_value
 
-    def mins_to_hh_mm(self, mins):
-        """Convert minutes to hours and minutes."""
+    def task_update_due_date(self, task):
+        """Update the due date of a periodic task."""
+
+        due_value = self.get_task_due_value(task)
+        rec_value = self.get_task_rec_value(task)
+        if self.cfg['rec_prop_absolute_sign'] in rec_value:
+            rec_period = rec_value[-1]
+            rec_value = rec_value[1:-1]
+        else:
+            rec_period = rec_value[-1]
+            rec_value = rec_value[0:-1]
+            due_value = datetime.datetime.now()
+        if rec_period == self.cfg['month_symbol']:
+            due_value += relativedelta(months=rec_value)
+        elif rec_period == self.cfg['year_symbol']:
+            due_value += relativedelta(years=rec_value)
+        else:
+            due_value += relativedelta(days=rec_value)
+        return (re.sub(self.cfg['due_prop'] + r'\d{4}-\d{2}-\d{2}',
+                       self.cfg['due_prop'] + due_value.strftime("%Y-%m-%d"),
+                       task))
+
+    def minutes_to_hh_mm(self, mins):
+        """Convert minutes to zero-padded two-digit hours and minutes."""
 
         hours_ = mins // 60
         mins_ = mins % 60
-        return f"{hours_:02}{self.settings['time_separator']}{mins_:02}"
+        return f"{hours_:02}{self.cfg['time_separator']}{mins_:02}"
 
     # Checkers
 
     def file_is_dtf(self, file_path):
+        """Is file a daily tasks file?"""
+
         # TODO Fix assumption that folder separator is always /
         file_name_and_ext = file_path.split('/')[-1]
         file_name = file_name_and_ext.split('.')[0]
@@ -366,21 +441,29 @@ class Doer:
         return False
 
     def line_is_heading(self, line):
+        """Is line a heading?"""
+
         if len(line) > 0 and line[0] == self.cfg['heading_prefix']:
             return True
         return False
 
     def line_is_heading_ttl(self, line):
+        """Is line a top tasks list (TTL) heading?"""
+
         if self.line_is_heading(line) and self.cfg['ttl_heading'] in line:
             return True
         return False
 
     def line_is_heading_incoming(self, line):
+        """"Is line an INCOMING tasks heading?"""
+
         if self.line_is_heading(line) and self.cfg['incoming_heading'] in line:
             return True
         return False
 
     def line_is_heading_task_group(self, line):
+        """Is line a task group heading?"""
+
         if (self.line_is_heading(line)
                 and not self.line_is_heading_ttl(line)
                 and not self.line_is_heading_ttl(line)):
@@ -388,6 +471,8 @@ class Doer:
         return False
 
     def line_is_task_basic(self, line):
+        """Is line a basic task?"""
+
         if (len(line) > 0
                 and line[0] in self.cfg_active_task_prefixes
                 and self.cfg['dur_prop'] in line
@@ -397,12 +482,16 @@ class Doer:
         return False
 
     def line_is_task_tt(self, line):
+        """Is line a top task?"""
+
         if (self.line_is_task_basic(line)
                 and line[0] == self.cfg['top_task_prefix']):
             return True
         return False
 
-    def line_is_task_due(self, line):
+    def line_is_task_booked(self, line):
+        """Is line a booked task?"""
+
         if (len(line) > 0
                 and line[0] == self.cfg['open_task_prefix']
                 and self.cfg['dur_prop'] in line
@@ -412,6 +501,8 @@ class Doer:
         return False
 
     def line_is_task_periodic(self, line):
+        """Is line a periodic task?"""
+
         if (len(line) > 0
                 and line[0] == self.cfg['open_task_prefix']
                 and self.cfg['dur_prop'] in line
@@ -422,6 +513,8 @@ class Doer:
         return False
 
     def line_is_task_daily(self, line):
+        """Is line a daily task?"""
+
         if (len(line) > 0
                 and line[0] == self.cfg['open_task_prefix']
                 and self.cfg['dur_prop'] in line
@@ -430,16 +523,28 @@ class Doer:
             return True
         return False
 
+    def line_is_task_basic_due_periodic(self, line):
+        """Is line a basic, due, or a periodic task?"""
+
+        if (self.line_is_task_basic(line)
+                or self.line_is_task_booked(line)
+                or self.line_is_task_periodic(line)):
+            return True
+        return False
+
     def line_is_task_any(self, line):
+        """Is line a basic, due, periodic, or a daily task?"""
         if (self.line_is_task_basic(line)
                 or self.line_is_task_tt(line)
-                or self.line_is_task_due(line)
+                or self.line_is_task_booked(line)
                 or self.line_is_task_periodic(line)
                 or self.line_is_task_daily(line)):
             return True
         return False
 
     def line_is_task_shlist(self, line):
+        """Is line a shopping list (shlist) task?"""
+
         if (len(line) > 0
                 and line[0] == self.cfg['open_task_prefix']
                 and self.cfg['dur_prop'] in line
@@ -448,7 +553,7 @@ class Doer:
         return False
 
     def word_has_property(self, word):
-        """Check if a property definition is contained in `word`."""
+        """Is a property definition contained in word?"""
 
         if (self.cfg['due_prop'] in word
                 or self.cfg['dur_prop'] in word
@@ -457,44 +562,41 @@ class Doer:
         return False
 
     def word_has_active_task_prefix(self, word):
+        """Does the word have an active task prefix?"""
+
         if (len(word) == 1
                 and word[0] in self.cfg_active_task_prefixes):
             return True
         return False
 
     def word_has_reserved_word_prefix(self, word):
+        """Does the word have a reserved word prefix?"""
+
         if (len(word) > 0
-                and word[0] in self.cfg['reserved_word_prefixes'].split('\n')):
+                and word[0] in self.cfg['reserved_word_prefixes']):
             return True
         return False
 
     # Reader and writer
 
-    @staticmethod
-    def read_file(file_path, single_string=False):
-        # TODO Add encoding
-        with open(file_path, 'r') as file_path_:
+    def read_file(self, file_path, single_string=False):
+        """Read file from disk, return contents as a single string or a list."""
+
+        with open(file_path, 'r', encoding=self.cfg['encoding']) as file_path_:
             if single_string:
                 lines = file_path_.read()
-                # TODO Make both branches do same kind of trimming
-                lines.rstrip()
             else:
                 lines = file_path_.readlines()
-                numof_lines_to_the_end = len(lines)
-                # for idx, line in enumerate(lines):
-                #    # TODO Fix this hard-coded constant
-                #    if "# THE END #" in line:
-                #        numof_lines_to_the_end = idx + 1
-                lines = lines[:numof_lines_to_the_end]
         return lines
 
-    @staticmethod
-    def write_file(file_path, contents):
-        # TODO Add encoding
-        with open(file_path, 'w') as file_path_:
+    def write_file(self, file_path, lines):
+        """Write list to file."""
+
+        contents = "".join(line for line in lines)
+        with open(file_path, 'w', encoding=self.cfg['encoding']) as file_path_:
             file_path_.write(contents)
 
-    # Some experimental features, not for everyday use
+    # Some experimental features, not for everyday use!
 
     def _move_daily_tasks_file(self):
         """In development. Do not use."""
@@ -632,14 +734,14 @@ class Doer:
         statistic = (
             f"{self.cfg['info_task_prefix'] + self.cfg_space}"
             f"{self.cfg['earned_time_balance_form']}"
-            f"{self.mins_to_hh_mm(earned_duration)} "
-            f"({self.mins_to_hh_mm(work_earned_duration)})"
+            f"{self.minutes_to_hh_mm(earned_duration)} "
+            f"({self.minutes_to_hh_mm(work_earned_duration)})"
         )
         tasks.insert(0, statistic)
         statistic = (
             f"> Remaining tasks duration (work) = "
-            f"{self.mins_to_hh_mm(total_duration)} "
-            f"({self.mins_to_hh_mm(work_duration)})"
+            f"{self.minutes_to_hh_mm(total_duration)} "
+            f"({self.minutes_to_hh_mm(work_duration)})"
         )
         tasks.insert(0, statistic)
         contents = ""
@@ -763,11 +865,11 @@ class Doer:
     def _back_up(self):
         """In development. Do not use."""
 
-        now = datetime.datetime.now()
+        now_ = datetime.datetime.now()
         try:
             shutil.copytree(
                 self.cfg['portfolio_base_dir'],
-                self.cfg['backup_dir'] + now.strftime("%Y%m%d%H%M%S"))
+                self.cfg['backup_dir'] + now_.strftime("%Y%m%d%H%M%S"))
         except shutil.Error as ex:
             logging.error("Directory not copied. Error: %s", ex)
         except OSError as ex:

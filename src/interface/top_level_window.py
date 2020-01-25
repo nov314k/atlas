@@ -20,8 +20,7 @@ from src.interface.file_tabs import FileTabs
 class TopLevelWindow(QMainWindow):
     """Top level window. """
 
-    # open_file = pyqtSignal(str)
-    # previous_folder = None
+    open_file = pyqtSignal(str)
 
     def __init__(self, config, doer, parent=None):
         """TopLevelWindow initialization."""
@@ -30,11 +29,6 @@ class TopLevelWindow(QMainWindow):
 
         self.doer = doer
         self.cfg = config.cfg
-        self.cfg_space = config.cfg_space
-        self.cfg_newline = config.cfg_newline
-        self.cfg_tab_order = config.cfg_tab_order
-        self.cfg_portfolio_files = config.cfg_portfolio_files
-        self.cfg_active_task_prefixes = config.cfg_active_task_prefixes
 
         screen_width, screen_height = self.screen_size()
         self.setMinimumSize(screen_width // 2, screen_height // 2)
@@ -186,13 +180,13 @@ class TopLevelWindow(QMainWindow):
 
     @property
     def current_tab(self):
-        """Docstring."""
+        """Get current/selected tab."""
 
         return self.tabs.currentWidget()
 
     @property
     def modified(self):
-        """Docstring."""
+        """Is tab modified?"""
 
         for widget in self.widgets:
             if widget.isModified():
@@ -201,38 +195,36 @@ class TopLevelWindow(QMainWindow):
 
     @property
     def tab_count(self):
-        """Docstring."""
+        """Get the number of open tabs."""
 
         return self.tabs.count()
 
     @property
     def widgets(self):
-        """Docstring."""
+        """List current widgets (tabs)."""
 
         return [self.tabs.widget(i) for i in range(self.tab_count)]
 
     # Utilities
 
-    def add_tab(self, path, text):
-        """Docstring."""
+    def add_tab(self, file_path, text):
+        """Add file contents to a new tab."""
 
-        new_tab = EditorPane(path, text, self.cfg_newline)
+        new_tab = EditorPane(file_path, text, self.cfg_newline)
         new_tab_index = self.tabs.addTab(new_tab, new_tab.label)
 
-        # @new_tab.modificationChanged.connect
-        # def on_modified():
-        #     """Docstring."""
-        #
-        #     modified_tab_index = self.tabs.currentIndex()
-        #     self.tabs.setTabText(modified_tab_index, new_tab.label)
-        #     self.update_top_window_title(new_tab.label)
+        @new_tab.modificationChanged.connect
+        def on_modified():
 
-        # @new_tab.open_file.connect
-        # def on_open_file(file):
-        #    """Docstring."""
-        #
-        #     # Bubble the signal up
-        #     self.open_file.emit(file)
+            modified_tab_index = self.tabs.currentIndex()
+            self.tabs.setTabText(modified_tab_index, new_tab.label)
+            self.update_top_window_title(new_tab.label)
+
+        @new_tab.open_file.connect
+        def on_open_file(file):
+
+            # Bubble the signal up
+            self.open_file.emit(file)
 
         self.tabs.setCurrentIndex(new_tab_index)
         new_tab.setFocus()
@@ -261,44 +253,46 @@ class TopLevelWindow(QMainWindow):
         return path
 
     def update_top_window_title(self, filename=None):
-        """Docstring."""
+        """Update top window title."""
 
         title = self.cfg['top_window_title']
         if filename:
             title += " - " + filename
         self.setWindowTitle(title)
 
-    @staticmethod
-    def read_file(file_path, single_string=False):
-        with open(file_path, 'r') as file_path_:
+    def read_file(self, file_path, single_string=False):
+        """Read file from disk, return contents as a single string or a list."""
+
+        with open(file_path, 'r', encoding=self.cfg['encoding']) as file_path_:
             if single_string:
                 lines = file_path_.read()
             else:
                 lines = file_path_.readlines()
         return lines
 
+    def write_file(self, file_path, contents):
+        """Write contents to file."""
+
+        with open(file_path, 'w', encoding=self.cfg['encoding']) as file_path_:
+            file_path_.write(contents)
+
     @staticmethod
     def screen_size():
-        """Docstring."""
+        """Get screen size."""
 
         screen = QDesktopWidget().screenGeometry()
         return screen.width(), screen.height()
 
-    @staticmethod
-    def write_file(self, file_path, contents):
-        with open(file_path, 'w', encoding=self.cfg['encoding']) as file_path_:
-            file_path_.write(contents)
-
     # Portfolio menu commands
 
     def portfolio_open(self):
-        """Open portfolio files, and today's DTF if available."""
+        """Open portfolio files, and today's daily tasks file if available."""
 
         for file_path in self.cfg_tab_order:
             self.file_open(file_path)
         today = datetime.datetime.now()
         file_name = f"{today.year}{today.month:02}{today.day:02}"
-        file_name_n_ext = file_name + self.cfg['atlas_files_extension']
+        file_name_n_ext = f"{file_name}{self.cfg['atlas_files_extension']}"
         if os.path.isfile(self.cfg['portfolio_base_dir'] + file_name_n_ext):
             self.file_open(self.cfg['portfolio_base_dir'] + file_name_n_ext)
 
@@ -338,11 +332,6 @@ class TopLevelWindow(QMainWindow):
         If `path` is not specified, it displays a dialog for the user to choose
         the path to open. Does not open an already opened file.
 
-        Parameters
-        ----------
-        file_path : str
-            Path to save tab contents to.
-
         """
 
         # Get the path from the user if it's not defined
@@ -370,13 +359,6 @@ class TopLevelWindow(QMainWindow):
         is displayed to choose the save path. Even though the path of a tab
         is contained in the tab, due to different usage scenarios for this
         function, it is best to keep these two parameters separate.
-
-        Parameters
-        ----------
-        file_path : str
-            Path to save tab contents to.
-        tab : EditorPane
-            Tab containing the contents to save to `path`.
 
         """
 
@@ -617,7 +599,7 @@ class TopLevelWindow(QMainWindow):
         selected_tab.setCursorPosition(selected_row, 0)
 
     def prepare_day_plan(self):
-        """Interface to doer.prepare_day_plan()."""
+        """Interface to doer.prepare_daily_tasks_file()."""
 
         self.file_save_all()
         today = datetime.datetime.now()
@@ -626,14 +608,12 @@ class TopLevelWindow(QMainWindow):
                                                              str(today.year))
         file_name = f"{year}{month:02}{day:02}"
         file_name_n_ext = file_name + self.cfg['atlas_files_extension']
-        dtf_open = False
         for idx in range(self.tab_count):
             if (self.tabs.widget(idx).path
                     == self.cfg['portfolio_base_dir'] + file_name_n_ext):
-                dtf_open = True
-        if dtf_open:
-            self.tabs.removeTab(idx)
-        self.doer.prepare_day_plan(day, month, year)
+                self.tabs.removeTab(idx)
+                break
+        self.doer.prepare_daily_tasks_file(year, month, day)
         self.file_open(self.cfg['portfolio_base_dir'] + file_name_n_ext)
 
     # Other menu commands

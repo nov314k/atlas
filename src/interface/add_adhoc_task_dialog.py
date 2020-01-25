@@ -1,9 +1,4 @@
-"""Contains all dialogs used in the application.
-
-Contains classes: PrepareDayDialog, LogProgressDialog, LogExpenseDialog,
-AddAdhocTaskDialog.
-
-"""
+"""Experimental. Do not use."""
 
 from PyQt5.QtWidgets import QCheckBox
 from PyQt5.QtWidgets import QDialog
@@ -14,15 +9,12 @@ from PyQt5.QtWidgets import QVBoxLayout
 
 
 class AddAdhocTaskDialog(QDialog):
-    """Docstring."""
 
     def __init__(self, parent=None):
-        """Initialize AddAdhocTask Dialog."""
 
         super().__init__(parent)
 
     def setup(self):
-        """Set up the dialog to add an ad hoc task."""
 
         self.setMinimumSize(600, 100)
         self.setWindowTitle("Add an ad hoc task")
@@ -63,7 +55,6 @@ class AddAdhocTaskDialog(QDialog):
         widget_layout.addWidget(button_box)
 
     def adhoc_task(self):
-        """Get entered values from the add an ad hoc task dialog."""
 
         return [self.adhoc_task_term.text(), self.duration_term.text(),
                 self.tags_term.text(), self.finished_term.isChecked(),
