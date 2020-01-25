@@ -373,7 +373,7 @@ class TopLevelWindow(QMainWindow):
             if tab.path is None:
                 return
             file_path = tab.path
-        self.write_file(self, file_path, tab.text())
+        self.write_file(file_path, tab.text())
         tab.setModified(False)
 
     def file_save_as(self):
