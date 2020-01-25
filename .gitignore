@@ -3,6 +3,7 @@ Lib
 Scripts
 pyvenv.cfg
 atlas/__pycache__
+*.pyc
 atlas/interface/__pycache__
 atlas/resources/__pycache__
 test-portfolio
