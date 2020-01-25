@@ -7,14 +7,14 @@ from PyQt5.QtWidgets import QApplication
 
 from pathlib import Path
 
-from src.config import Config
-from src.doer import Doer
-from src.interface.top_level_window import TopLevelWindow
+from config import Config
+from doer import Doer
+from interface.top_level_window import TopLevelWindow
 
 
 def run():
     logging.basicConfig(
-        filename='../log/atlas.log', level=logging.DEBUG,
+        filename='log/atlas.log', level=logging.DEBUG,
         format='%(asctime)s:%(name)s:%(levelname)s:%(message)s')
     logging.info("Starting Atlas")
 

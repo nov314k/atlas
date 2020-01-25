@@ -4,17 +4,17 @@ import os
 import datetime
 import sys
 
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (QAction, QDesktopWidget, QWidget, QVBoxLayout,
                              QTabWidget, QFileDialog, QMessageBox, QMainWindow)
 from pkg_resources import resource_filename
-from src.interface.prepare_day_dialog import PrepareDayDialog
-from src.interface.log_progress_dialog import LogProgressDialog
-from src.interface.add_adhoc_task_dialog import AddAdhocTaskDialog
-from src.interface.editor_pane import EditorPane
-from src.interface.menu_bar import MenuBar
-from src.interface.file_tabs import FileTabs
+from interface.prepare_day_dialog import PrepareDayDialog
+from interface.log_progress_dialog import LogProgressDialog
+from interface.add_adhoc_task_dialog import AddAdhocTaskDialog
+from interface.editor_pane import EditorPane
+from interface.menu_bar import MenuBar
+from interface.file_tabs import FileTabs
 
 
 class TopLevelWindow(QMainWindow):
