@@ -19,6 +19,7 @@ def run():
     logging.info("Starting Atlas")
 
     portfolio_file = '/home/istrator/atlas/test/exportfo/exportfo.ini'
+    portfolio_file = 'E:\\dev\\3\\atlas\\test\\exportfo\\exportfo.ini'
     #    if len(sys.argv) > 1:
     #        portfolio_file = sys.argv[1]
 

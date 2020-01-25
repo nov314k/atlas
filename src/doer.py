@@ -65,9 +65,9 @@ class Doer:
         del lines[line_num]
         now_ = datetime.datetime.now()
         done_task = (f"{self.cfg['done_task_prefix']}"
-                     f"{self.cfg_space}"
+                     f"{self.cfg['space']}"
                      f"{now_.strftime('%Y-%m-%d')}"
-                     f"{self.cfg_space}"
+                     f"{self.cfg['space']}"
                      f"{selected_task}")
         lines.append(done_task)
         self.write_file(file_path, lines)
@@ -96,7 +96,7 @@ class Doer:
 
         """
 
-        for file_path in self.cfg_portfolio_files:
+        for file_path in self.cfg['portfolio_files']:
             lines = self.read_file(file_path)
             in_ttl = False
             task_found = False
@@ -152,9 +152,9 @@ class Doer:
         if mark_as_rescheduled:
             prefix = self.cfg['rescheduled_periodic_task_prefix']
         marked_task = (f"{prefix}"
-                       f"{self.cfg_space}"
+                       f"{self.cfg['space']}"
                        f"{now_.strftime('%Y-%m-%d')}"
-                       f"{self.cfg_space}"
+                       f"{self.cfg['space']}"
                        f"{selected_task}")
         lines.append(marked_task)
         self.write_file(file_path, lines)
@@ -205,10 +205,10 @@ class Doer:
         below_incoming_header = False
         below_task_group_header = False
         ttl_tasks = [(f"{self.cfg['heading_prefix']}" 
-                      f"{self.cfg_space}" 
+                      f"{self.cfg['space']}" 
                       f"{self.cfg['ttl_heading']}"),
-                     self.cfg_newline,
-                     self.cfg_newline]
+                     self.cfg['newline'],
+                     self.cfg['newline']]
         for idx, line in enumerate(lines):
             if below_incoming_header:
                 processed_lines.append(line)
@@ -219,20 +219,20 @@ class Doer:
                 processed_lines.append(line)
             if self.line_is_heading_task_group(line):
                 below_task_group_header = True
-        processed_lines = ttl_tasks + [self.cfg_newline] + processed_lines
+        processed_lines = ttl_tasks + [self.cfg['newline']] + processed_lines
         self.write_file(file_path, processed_lines)
 
     def generate_ttls(self):
         """Generate a top tasks list for each task group file in portfolio."""
 
-        for file_path in self.cfg_portfolio_files:
+        for file_path in self.cfg['portfolio_files']:
             self.generate_ttl(file_path)
 
     def extract_booked(self):
         """Extract booked tasks into their auxiliary file."""
 
         booked_tasks = []
-        for file_path in self.cfg_portfolio_files:
+        for file_path in self.cfg['portfolio_files']:
             lines = self.read_file(file_path)
             for line in lines:
                 if self.line_is_task_booked(line):
@@ -243,7 +243,7 @@ class Doer:
         """Extract daily tasks into their auxiliary file."""
 
         daily_tasks = []
-        for file_path in self.cfg_portfolio_files:
+        for file_path in self.cfg['portfolio_files']:
             lines = self.read_file(file_path)
             for line in lines:
                 if self.line_is_task_daily(line):
@@ -254,7 +254,7 @@ class Doer:
         """Extract periodic tasks into their auxiliary file."""
 
         periodic_tasks = []
-        for file_path in self.cfg_portfolio_files:
+        for file_path in self.cfg['portfolio_files']:
             lines = self.read_file(file_path)
             for line in lines:
                 if self.line_is_task_periodic(line):
@@ -265,7 +265,7 @@ class Doer:
         """Extract shlist tasks into their auxiliary file."""
 
         shlist_tasks = []
-        for file_path in self.cfg_portfolio_files:
+        for file_path in self.cfg['portfolio_files']:
             lines = self.read_file(file_path)
             for line in lines:
                 if self.line_is_task_shlist(line):
@@ -307,7 +307,7 @@ class Doer:
                 tasks.append(task)
 
         # Add top tasks
-        for file_path in self.cfg_portfolio_files:
+        for file_path in self.cfg['portfolio_files']:
             lines = self.read_file(file_path)
             for line in lines:
                 if self.line_is_task_tt(line):
@@ -325,7 +325,7 @@ class Doer:
 
         ordered_tasks = []
         already_processed_tasks = []
-        for token in self.cfg_tokens_in_sorting_order:
+        for token in self.cfg['tokens_in_sorting_order']:
             for task in tasks:
                 if token in task and task not in already_processed_tasks:
                     ordered_tasks.append(task)
@@ -349,7 +349,7 @@ class Doer:
         with open(self.cfg['today_file'], 'w') as today_file_:
             print(self.cfg['daily_tasks_file_heading'], file=today_file_)
             for task in ordered_tasks:
-                print(task.rstrip(self.cfg_newline), file=today_file_)
+                print(task.rstrip(self.cfg['newline']), file=today_file_)
             print(self.cfg['done_tasks_and_log_heading'], file=today_file_)
         file_name = f"{year}{month:02}{day:02}"
         file_name_n_ext = f"{file_name}{self.cfg['atlas_files_extension']}"
@@ -361,7 +361,7 @@ class Doer:
     def get_task_definition(self, task):
         """Get task directive from task definition."""
 
-        words = task.split(self.cfg_space)
+        words = task.split(self.cfg['space'])
         task_text = ''
         for word in words:
             # Beware of special letters (and words beginning with them)!
@@ -370,13 +370,13 @@ class Doer:
                     or self.word_has_reserved_word_prefix(word)):
                 pass
             else:
-                task_text += word + self.cfg_space
-        return task_text.rstrip(self.cfg_space)
+                task_text += word + self.cfg['space']
+        return task_text.rstrip(self.cfg['space'])
 
     def get_task_duration(self, task):
         """Get task duration from task definition."""
 
-        words = task.split(self.cfg_space)
+        words = task.split(self.cfg['space'])
         for word in words:
             if self.cfg['dur_prop'] in word:
                 duration = int(word.split(self.cfg['time_separator'])[1])
@@ -385,7 +385,7 @@ class Doer:
     def get_task_due_value(self, task):
         """Get task due date from task definition."""
 
-        words = task.split(self.cfg_space)
+        words = task.split(self.cfg['space'])
         for word in words:
             if self.cfg['due_prop'] in word:
                 datum = word.split(self.cfg['property_separator'])[1]
@@ -393,7 +393,7 @@ class Doer:
                 return datetime.datetime(int(year), int(month), int(day))
 
     def get_task_rec_value(self, task):
-        words = task.split(self.cfg_space)
+        words = task.split(self.cfg['space'])
         for word in words:
             if self.cfg['rec_prop'] in word:
                 rec_value = word.split(self.cfg['property_separator'])[1]
@@ -474,7 +474,7 @@ class Doer:
         """Is line a basic task?"""
 
         if (len(line) > 0
-                and line[0] in self.cfg_active_task_prefixes
+                and line[0] in self.cfg['active_task_prefixes']
                 and self.cfg['dur_prop'] in line
                 and self.cfg['due_prop'] not in line
                 and self.cfg['rec_prop'] not in line):
@@ -565,7 +565,7 @@ class Doer:
         """Does the word have an active task prefix?"""
 
         if (len(word) == 1
-                and word[0] in self.cfg_active_task_prefixes):
+                and word[0] in self.cfg['active_task_prefixes']):
             return True
         return False
 
@@ -620,17 +620,17 @@ class Doer:
             task_finished = result[3]
             # If incoming task is a work task, add work tag to existing tags
             if result[4]:
-                result[2] += self.cfg_space + self.cfg['work_tag']
-            lines = current_tab.text().split(self.c_newline)
+                result[2] += self.cfg['space'] + self.cfg['work_tag']
+            lines = current_tab.text().split(self.cfg['newline'])
             extra_line_before = ''
             extra_line_after = ''
             # If active tab is a portfolio file
-            if current_tab.path in self.cfg_portfolio_files:
+            if current_tab.path in self.cfg['portfolio_files']:
                 # TODO Add a suitable message for why we're returning
                 if task_finished:
                     return
-                ordering_string = self.cfg['heading_prefix'] + \
-                    self.cfg_space
+                ordering_string = (self.cfg['heading_prefix']
+                                   + self.cfg['space'])
                 ordering_string += self.cfg['incoming_heading']
                 extra_line_before = self.c_newline
                 extra_line_after = ''
@@ -638,7 +638,7 @@ class Doer:
             else:
                 lines = lines[:-1]
                 ordering_string = self.cfg['heading_prefix'] + \
-                    self.cfg_space
+                    self.cfg['space']
                 ordering_string += self.cfg['tasks_proposed_heading']
                 extra_line_before = self.c_newline
                 extra_line_after = ''
@@ -649,12 +649,12 @@ class Doer:
             if task_finished:
                 task_status_mark = self.cfg['done_task_prefix']
             # Start constructing the task to add
-            taux = extra_line_before + task_status_mark + self.cfg_space
+            taux = extra_line_before + task_status_mark + self.cfg['space']
             # Add task and duration
-            taux += result[0] + self.cfg_space + \
+            taux += result[0] + self.cfg['space'] + \
                 self.cfg['dur_prop'] + result[1]
             # Add tags
-            taux += self.cfg_space + result[2] + extra_line_after
+            taux += self.cfg['space'] + result[2] + extra_line_after
             # Generate new contents
             contents = ""
             for line in lines:
@@ -684,10 +684,10 @@ class Doer:
         for i, _ in enumerate(lines):
             if (i == row
                     and lines[i]
-                    and lines[i][0] in self.cfg_active_task_prefixes
+                    and lines[i][0] in self.cfg['active_task_prefixes']
                     and tag not in lines[i]):
-                line = lines[i] + self.cfg_space + tag
-                contents += line + self.c_newline
+                line = lines[i] + self.cfg['space'] + tag
+                contents += line + self.cfg['newline']
                 col = len(line)
             else:
                 contents += lines[i] + self.c_newline
@@ -710,8 +710,8 @@ class Doer:
         work_earned_duration = 0
         for task in tasks_aux:
             if task:
-                task = re.sub(r'\d{2}:\d{2}' + self.cfg_space, "", task)
-                if task[0] in self.cfg_active_task_prefixes:
+                task = re.sub(r'\d{2}:\d{2}' + self.cfg['space'], "", task)
+                if task[0] in self.cfg['active_task_prefixes']:
                     if self.cfg['dur_prop'] not in task:
                         self._view.show_message("Please define dur:\n" + task)
                         return
@@ -894,6 +894,6 @@ class Doer:
 
         if entry and len(entry) > self.cfg.getint('log_line_length'):
             entry = (entry[:self.cfg.getint('log_line_length')]
-                    + self.c_newline
+                    + self.cfg['newline']
                     + entry[self.cfg.getint('log_line_length'):])
         return entry

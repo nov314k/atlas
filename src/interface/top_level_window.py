@@ -210,7 +210,7 @@ class TopLevelWindow(QMainWindow):
     def add_tab(self, file_path, text):
         """Add file contents to a new tab."""
 
-        new_tab = EditorPane(file_path, text, self.cfg_newline)
+        new_tab = EditorPane(file_path, text, self.cfg['newline'])
         new_tab_index = self.tabs.addTab(new_tab, new_tab.label)
 
         @new_tab.modificationChanged.connect
@@ -288,7 +288,7 @@ class TopLevelWindow(QMainWindow):
     def portfolio_open(self):
         """Open portfolio files, and today's daily tasks file if available."""
 
-        for file_path in self.cfg_tab_order:
+        for file_path in self.cfg['tab_order']:
             self.file_open(file_path)
         today = datetime.datetime.now()
         file_name = f"{today.year}{today.month:02}{today.day:02}"
@@ -455,14 +455,14 @@ class TopLevelWindow(QMainWindow):
         selected_tab = self.current_tab
         selected_row = selected_tab.getCursorPosition()[0]
         first_visible_line = selected_tab.firstVisibleLine()
-        lines = selected_tab.text().split(self.cfg_newline)
+        lines = selected_tab.text().split(self.cfg['newline'])
         if selected_row > 0:
             for idx, _ in enumerate(lines):
                 if idx == selected_row - 1:
                     temp_line = lines[idx]
                     lines[idx] = lines[idx + 1]
                     lines[idx + 1] = temp_line
-            contents = "".join(line + self.cfg_newline for line in lines)
+            contents = "".join(line + self.cfg['newline'] for line in lines)
             contents = contents[:-1]
             selected_tab.SendScintilla(selected_tab.SCI_SETTEXT,
                                        contents.encode(self.cfg['encoding']))
@@ -482,8 +482,8 @@ class TopLevelWindow(QMainWindow):
                     temp_line = lines[idx]
                     lines[idx] = lines[idx - 1]
                     lines[idx - 1] = temp_line
-            contents = "".join(line + self.cfg_newline for line in lines)
-            contents = contents.rstrip(self.cfg_newline)
+            contents = "".join(line + self.cfg['newline'] for line in lines)
+            contents = contents.rstrip(self.cfg['newline'])
             selected_tab.SendScintilla(selected_tab.SCI_SETTEXT,
                                        contents.encode(self.cfg['encoding']))
             selected_tab.setFirstVisibleLine(first_visible_line)
