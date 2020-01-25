@@ -1,0 +1,20 @@
+# TTL #
+
+
+# INCOMING #
+
+
+# Life Area 1
+
+## Level 2
+
+### Level 3
+
+- Ordinary task dur:5 +la1
+- Daily task dur:7 rec:1d +la1
+- due:2020-01-11 Booked (due) task dur:6 +la1
+- due:2020-01-01 Relative periodic task dur:10 rec:7d +la1
+- due:2020-01-01 Absolute periodic task dur:15 rec:+1m +la1
+- Shlist task dur:99 +la1 @shlist
+
+# THE END #

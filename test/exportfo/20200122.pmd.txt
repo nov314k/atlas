@@ -1,0 +1,12 @@
+# Daily task list
+
+- due:2020-01-11 Booked (due) task dur:6 +la1
+- due:2020-01-01 Relative periodic task dur:10 rec:7d +la1
+- due:2020-01-01 Absolute periodic task dur:15 rec:+1m +la1
+# Tasks DONE
+
+x 2020-01-22 - task dur:0
+
+x 2020-01-22 - Daily task dur:7 rec:1d +la1
+
+x 2020-01-22 - tet dur:6

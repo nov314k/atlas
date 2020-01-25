@@ -10,7 +10,7 @@ class JsonSettings:
             self.settings['atlas_settings_file'] = ext_settings['atlas_settings_file']
             self.settings['atlas_session_file'] = ext_settings['atlas_session_file']
             self.settings['portfolio_base_dir'] = ext_settings['portfolio_base_dir']
-            self.settings['portfolio_files'] = [self.settings['portfolio_base_dir'] + f for f in ext_settings['portfolio_files']]
+            self.settings['cfg_portfolio_files'] = [self.settings['portfolio_base_dir'] + f for f in ext_settings['cfg_portfolio_files']]
             self.settings['portfolio_log_file'] = self.settings['portfolio_base_dir'] + ext_settings['portfolio_log_file']
             self.settings['earned_times_file'] = self.settings['portfolio_base_dir'] + ext_settings['earned_times_file']
             self.settings['backup_dir'] = ext_settings['backup_dir']
@@ -56,6 +56,6 @@ class JsonSettings:
             self.settings['earned_time_balance_form'] = ext_settings['earned_time_balance_form']
             self.settings['atlas_files_extension'] = ext_settings["atlas_files_extension"]
             self.settings['get_data_from_calendars'] = ext_settings['get_data_from_calendars']
-            self.settings['active_task_prefixes'] = [self.settings['open_task_prefix'], self.settings['top_task_prefix']]
+            self.settings['cfg_active_task_prefixes'] = [self.settings['open_task_prefix'], self.settings['top_task_prefix']]
             self.settings['reserved_word_prefixes'] = [self.settings['tag_prefix'], self.settings['cat_prefix']]
 

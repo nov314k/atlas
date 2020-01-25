@@ -1,12 +1,11 @@
-.idea
+log
 expl
 venv
 Include
 Lib
 Scripts
 pyvenv.cfg
-*.pyc
 */__pycache__
+*.pyc
 *.log
 test-portfolio
-

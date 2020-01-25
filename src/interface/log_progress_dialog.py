@@ -1,29 +1,19 @@
-"""Contains all dialogs used in the application.
-
-Contains classes: PrepareDayDialog, LogProgressDialog, LogExpenseDialog,
-AddAdhocTaskDialog.
-
-"""
+"""Experimental. Do not use."""
 
 from PyQt5.QtWidgets import QDialog
 from PyQt5.QtWidgets import QDialogButtonBox
 from PyQt5.QtWidgets import QLabel
 from PyQt5.QtWidgets import QLineEdit
 from PyQt5.QtWidgets import QVBoxLayout
-# from PyQt5.QtWidgets import (QCheckBox, QComboBox, QDialog, QDialogButtonBox,
-#                             QLabel, QLineEdit, QVBoxLayout)
 
 
 class LogProgressDialog(QDialog):
-    """Dialog for logging progress (the main log)."""
 
     def __init__(self):
-        """Docstring."""
 
         self.log_entry_term = QLineEdit()
 
     def setup(self):
-        """Docstring."""
 
         self.setMinimumSize(600, 100)
         self.setWindowTitle("Log Progress")
@@ -39,6 +29,5 @@ class LogProgressDialog(QDialog):
         widget_layout.addWidget(button_box)
 
     def log_entry(self):
-        """Docstring."""
 
         return self.log_entry_term.text()
