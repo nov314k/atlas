@@ -15,7 +15,7 @@ _Atlas_ helps you to:
 * Store new tasks and ideas for processing later on.
 
 <p align="center">
-<img src="docs/images/1375061_width_x_height_226x250.png">
+<img src="images/1375061_width_x_height_226x250.png">
 </p>
  
 # How does it work?
@@ -32,7 +32,7 @@ As tasks are done during the day, they can be marked as done, or for further res
 # _Atlas_ workflow
 
 <p align="center">
-<img src="docs/images/flowchart.png">
+<img src="images/flowchart.png">
 </p>
 
 # Who is it intended for?
@@ -53,15 +53,15 @@ _Atlas_ is free (as in freedom!) and open source software released under the [GN
 
 If you like what you have read so far, here are some more detailed articles that explain Atlas in more detail:
 
-* [_Atlas_ rationale](docs/atlas-rationale.md)
-* [_Atlas_ portfolio structure and syntax](docs/atlas-portfolio-structure-and-syntax.md)
-* [Installing _Atlas_ on Windows](docs/installing-atlas-on-windows.md)
-* [Installing _Atlas_ on Ubuntu](docs/installing-atlas-on-ubuntu.md)
+* [_Atlas_ rationale](atlas-rationale.md)
+* [_Atlas_ portfolio structure and syntax](atlas-portfolio-structure-and-syntax.md)
+* [Installing _Atlas_ on Windows](installing-atlas-on-windows.md)
+* [Installing _Atlas_ on Ubuntu](installing-atlas-on-ubuntu.md)
 
 ## Useful links
 
-* [Useful links](docs/useful-links.md)
+* [Useful links](useful-links.md)
 
 <p align="center">
-<img src="docs/images/1381638_200x344.png">
+<img src="images/1381638_200x344.png">
 </p>
