@@ -11,7 +11,7 @@ _Atlas_ is in very stages of development, currently unstable and buggy. A very r
 
 _Atlas_ is free (as in freedom!) and open source software released under the [GNU General Public License Version 3](LICENSE.md).
 
-If you like what you have read so far, you can learn more by [starting here](https://github.com/nov314k/atlas/docs/starting-here.md).
+If you like what you have read so far, you can learn more by [starting here](docs/start-here.md).
 
 <p align="center">
 <img src="docs/images/1375061_width_x_height_226x250.png">
