@@ -1,4 +1,4 @@
-_Atlas_ (**A**utomatic **T**ask **L**ist **A**dministration **S**ystem) is my own personal task management tool.
+_Atlas_ (**A**utomated **T**ask **L**ist **A**dministration **S**ystem) is my own personal task management tool.
 
 It is a customised version of the [todo.txt](http://todotxt.org/) system (with multiple input files,
 slightly different format rules and syntax, prioritization across entire portfolio, and potentially much more).
