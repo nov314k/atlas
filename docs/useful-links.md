@@ -6,6 +6,10 @@
 * [https://stackoverflow.com/questions/7719806/preventing-keyboard-shortcuts-being-triggered-in-qscintilla-example-code](https://stackoverflow.com/questions/7719806/preventing-keyboard-shortcuts-being-triggered-in-qscintilla-example-code)
 * [https://stackoverflow.com/questions/47622714/how-to-assign-qscintilla-shortcuts](https://stackoverflow.com/questions/47622714/how-to-assign-qscintilla-shortcuts)
 
+## Getting Things Done
+
+* [GTD in 15 minutes – A Pragmatic Guide to Getting Things Done](https://hamberg.no/gtd/)
+
 <p align="center">
 <img src="../docs/images/1375061_width_x_height_226x250.png">
 </p>
