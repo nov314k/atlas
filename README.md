@@ -7,7 +7,7 @@ of project and task administration.
 
 Over time I have developed my own personal management methodology, and I am developing _Atlas_ to support it.
 
-_Atlas_ is in very stages of development, currently unstable and buggy. A very rough prototype can be found [here](https://github.com/nov314k/atlas-v01), together with some[screen shots](https://github.com/nov314k/atlas-v01/docs/screen-shots.md).
+_Atlas_ is in very stages of development, currently unstable and buggy. A very rough prototype can be found [here](https://github.com/nov314k/atlas-v01), together with some [screen shots](https://github.com/nov314k/atlas-v01/docs/screen-shots.md).
 
 _Atlas_ is free (as in freedom!) and open source software released under the [GNU General Public License Version 3](LICENSE.md).
 
