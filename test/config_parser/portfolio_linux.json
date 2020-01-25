@@ -1,0 +1,127 @@
+{
+  "atlas_settings_file": "/home/istrator/nextcloud/atlas/portfolio_linux.json",
+  "atlas_session_file": "/home/istrator/nextcloud/atlas/session.json",
+  "portfolio_base_dir": "/home/istrator/nextcloud/atlas/",
+
+  "portfolio_files": [
+    "car.pmd.txt",
+    "comsocen.pmd.txt",
+    "finad.pmd.txt",
+    "fitness.pmd.txt",
+    "hobbies.pmd.txt",
+    "home.pmd.txt",
+    "hotel.pmd.txt",
+    "infra.pmd.txt",
+    "it.pmd.txt",
+    "planning.pmd.txt",
+    "rels.pmd.txt",
+    "study.pmd.txt",
+    "work.pmd.txt",
+    "yhm.pmd.txt"
+  ],
+
+  "tokens_in_sorting_order": [
+    "@mr",
+    "+cal",
+    "@ctdw",
+    "+work",
+    "@dr",
+    "+car",
+    "+comsocen",
+    "+finad",
+    "+fitness",
+    "+hobbies",
+    "+home",
+    "+hotel",
+    "+infra",
+    "+it",
+    "+planning",
+    "+rels",
+    "+study",
+    "+yhm",
+    "@tea",
+    "@dp",
+    "@er"
+  ],
+
+  "tab_order": [
+    "car.pmd.txt",
+    "comsocen.pmd.txt",
+    "finad.pmd.txt",
+    "fitness.pmd.txt",
+    "hobbies.pmd.txt",
+    "home.pmd.txt",
+    "hotel.pmd.txt",
+    "infra.pmd.txt",
+    "it.pmd.txt",
+    "planning.pmd.txt",
+    "rels.pmd.txt",
+    "study.pmd.txt",
+    "work.pmd.txt",
+    "yhm.pmd.txt",
+    "log/log.pmd.txt",
+    "auxiliaries/booked.pmd.txt",
+    "auxiliaries/daily.pmd.txt",
+    "auxiliaries/periodic.pmd.txt",
+    "auxiliaries/shlist.pmd.txt"
+  ],
+
+  "backup_dir": "e:/dev/3/atlas-bu/",
+  "daily_files_archive_dir": "e:/dev/0/atlas-dailies-dst/",
+
+  "portfolio_log_file": "log/log.pmd.txt",
+  "earned_times_file": "log/earned.pmd.txt",
+
+  "daily_file": "auxiliaries/daily.pmd.txt",
+  "booked_file": "auxiliaries/booked.pmd.txt",
+  "periodic_file": "auxiliaries/periodic.pmd.txt",
+  "shlist_file": "auxiliaries/shlist.pmd.txt",
+  "today_file": "auxiliaries/today.pmd.txt",
+
+  "space": " ",
+
+  "heading_prefix": "#",
+  "ttl_heading": "TTL #",
+  "incoming_heading": "INCOMING #",
+  "tasks_proposed_heading": "Tasks proposed",
+  "tasks_done_heading": "Tasks done",
+  "the_end_heading": "THE END #",
+  "special_heading_suffix": "#",
+
+  "due_prop": "due:",
+  "dur_prop": "dur:",
+  "rec_prop": "rec:",
+
+  "daily_rec_prop_val": "rec:1d",
+
+  "tag_prefix": "+",
+  "work_tag": "+work",
+  "incoming_tag": "+inc",
+
+  "cat_prefix": "@",
+  "shlist_cat": "@shlist",
+
+  "top_task_prefix": "t",
+  "open_task_prefix": "-",
+  "done_task_prefix": "x",
+  "info_task_prefix": ">",
+  "paused_task_prefix": "|",
+  "for_rescheduling_task_prefix": "r",
+  "rescheduled_periodic_task_prefix": "R",
+
+  "day_symbol": "d",
+  "month_symbol": "m",
+  "year_symbol": "y",
+
+  "date_separator": "-",
+  "time_separator": ":",
+
+  "log_entry_prefix": "LOG-",
+  "log_line_length": "80",
+
+  "earned_time_balance_form": "Total earned time (earned work time) =",
+
+  "atlas_files_extension": ".pmd.txt",
+
+  "get_data_from_calendars": true
+}

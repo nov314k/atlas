@@ -4,7 +4,7 @@ from PyQt5.QtGui import QFontDatabase
 from pkg_resources import resource_string
 
 
-DEFAULT_FONT_SIZE = 12
+DEFAULT_FONT_SIZE = 8
 FONT_NAME = 'Source Code Pro'
 FONT_FILENAME_PATTERN = 'SourceCodePro-{variant}.otf'
 FONT_VARIANTS = ('Bold', 'BoldIt', 'It', 'Regular', 'Semibold', 'SemiboldIt')

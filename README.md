@@ -1,13 +1,13 @@
-# What is Atlas?
+# What is _Atlas_?
 
 > Happiness is the pursuit of worthwhile goals in key areas of life.
 > This pursuit is done by continuously completing smaller and prioritized tasks.
 
-Atlas (Automatic Task List Administration System) is a personal task management tool. It automatically compiles a daily todo task list based on task definitions in all relevant areas of life, and personal preferences.
+_Atlas_ (Automatic Task List Administration System) is a personal task management tool. It automatically compiles a daily todo task list based on task definitions in all relevant areas of life, and personal preferences.
 
-# What can Atlas do for you?
+# What can _Atlas_ do for you?
 
-Atlas helps you to:
+_Atlas_ helps you to:
 
 * Break up goals into tasks
 * Prioritize and sequence tasks
@@ -20,16 +20,16 @@ Atlas helps you to:
  
 # How does it work?
 
-Atlas workflow consists of the following steps:
+_Atlas_ workflow consists of the following steps:
 
 1. Define all tasks that need to be done in each area of life
 2. Select tasks with highest priority (top tasks) 
 3. Specify personal schedulling preferences
-4. Run Atlas to produce a daily todo task list.
+4. Run _Atlas_ to produce a daily todo task list.
 
-As tasks are done during the day, they can be marked as done, or for further reschedulling. This information can be used for evaluating one's performance by Atlas.
+As tasks are done during the day, they can be marked as done, or for further reschedulling. This information can be used for evaluating one's performance by _Atlas_.
 
-# Atlas workflow
+# _Atlas_ workflow
 
 <p align="center">
 <img src="docs/images/flowchart.png">
@@ -37,24 +37,30 @@ As tasks are done during the day, they can be marked as done, or for further res
 
 # Who is it intended for?
 
-Atlas is best suited for one's own personal use, rather than for large and complex projects.
+_Atlas_ is best suited for one's own personal use, rather than for large and complex projects.
 
 # Development status
 
-Atlas is in very early stages of development, and a lot of new features are in the works.
+_Atlas_ is in very early stages of development, and a lot of new features are in the works.
 
 # Copyright and License
 
-Copyright © 2019 Novak Petrovic
+Copyright Â© 2019 Novak Petrovic
 
-Atlas is free and open source software released under the [GNU General Public License Version 3](LICENSE.md).
+_Atlas_ is free (as in freedom!) and open source software released under the [GNU General Public License Version 3](LICENSE.md).
 
 # Further reading
 
 If you like what you have read so far, here are some more detailed articles that explain Atlas in more detail:
 
-* [What is an Atlas portfolio?](docs/what-is-an-atlas-portfolio.md)
-* [Installing Atlas on Windows](docs/installing-atlas-on-windows.md)
+* [_Atlas_ rationale](docs/atlas-rationale.md)
+* [_Atlas_ portfolio structure and syntax](docs/atlas-portfolio-structure-and-syntax.md)
+* [Installing _Atlas_ on Windows](docs/installing-atlas-on-windows.md)
+* [Installing _Atlas_ on Ubuntu](docs/installing-atlas-on-ubuntu.md)
+
+## Useful links
+
+* [Useful links](docs/useful-links.md)
 
 <p align="center">
 <img src="docs/images/1381638_200x344.png">

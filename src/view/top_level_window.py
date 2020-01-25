@@ -1,20 +1,18 @@
 """Docstring."""
 
-import os.path
-from PyQt5.QtCore import QSize, Qt, pyqtSignal, QTimer
-from PyQt5.QtWidgets import (QToolBar, QAction, QDesktopWidget, QWidget,
-                             QVBoxLayout, QTabWidget, QFileDialog, QMessageBox,
-                             QMainWindow, QStatusBar, QShortcut, QApplication,
-                             QMenuBar)
+from PyQt5.QtCore import Qt, pyqtSignal, QTimer
+from PyQt5.QtWidgets import (QAction, QDesktopWidget, QWidget, QVBoxLayout,
+                             QTabWidget, QFileDialog, QMessageBox, QMainWindow,
+                             QShortcut)
 from PyQt5.QtGui import QKeySequence
 from PyQt5.QtGui import QIcon
-from pkg_resources import resource_filename, resource_string
-from interface.dialogs import (PrepareDayDialog, LogProgressDialog,
-                               LogExpenseDialog, AddAdhocTaskDialog)
-from interface.font import DEFAULT_FONT_SIZE
-from interface.editor import EditorPane
-
-
+from pkg_resources import resource_filename
+from view.prepare_day_dialog import PrepareDayDialog
+from view.log_progress_dialog import LogProgressDialog
+from view.add_adhoc_task_dialog import AddAdhocTaskDialog
+from view.editor_pane import EditorPane
+from view.menu_bar import MenuBar
+from view.file_tabs import FileTabs
 
 
 def screen_size():
@@ -23,133 +21,13 @@ def screen_size():
     screen = QDesktopWidget().screenGeometry()
     return screen.width(), screen.height()
 
-class MenuBar(QMenuBar):
-    """Docstring."""
 
-    def __init__(self, parent):
-        """Docstring."""
-
-#        super().__init__(parent)
-        pass
-
-    def setup(self):
-        """Docstring."""
-
-        self.addMenu("&Portfolio")
-        self.addMenu("la&File")
-        self.addMenu("&Task")
-        self.addMenu("&Log")
-
-class ButtonBar(QToolBar):
-    """Docstring."""
-
-    def __init__(self, parent):
-        """Docstring."""
-
-        super().__init__(parent)
-        self.setMovable(False)
-        self.setIconSize(QSize(64, 64))
-        self.setToolButtonStyle(3)
-        self.setContextMenuPolicy(Qt.PreventContextMenu)
-        self.setObjectName('StandardToolBar')
-        self.reset()
-
-    def reset(self):
-        """Docstring."""
-
-        self.slots = {}
-        self.clear()
-
-    def change_mode(self):
-        """Docstring."""
-
-        self.reset()
-        self.addAction(name='toggle_tt', display_name="Toggle\nTT",
-                       tool_text="")
-        self.addAction(name='generate_ttl', display_name="Generate\nTTL",
-                       tool_text="")
-        self.addAction(name='prepare_day_plan',
-                       display_name="Prepare\nday\nplan", tool_text="")
-        self.addAction(name='analyse_tasks', display_name="Analyse\ntasks",
-                       tool_text="")
-        self.addAction(name='mark_task_done', display_name="Mark\ntask\ndone",
-                       tool_text="")
-        self.addAction(name='mark_task_for_rescheduling',
-                       display_name="Mark\ntask\nfor\nrescheduling",
-                       tool_text="")
-        self.addAction(name='reschedule_periodic_task',
-                       display_name="Reschedule\nperiodic\ntask", tool_text="")
-        self.addAction(name='extract_earned_time',
-                       display_name="Extract\nearned\ntime", tool_text="")
-
-    def set_responsive_mode(self, width, height):
-        """Docstring."""
-
-        font_size = DEFAULT_FONT_SIZE
-        if width < 1124 and height > 600:
-            self.setIconSize(QSize(48, 48))
-        elif height < 600 and width < 940:
-            font_size = 10
-            self.setIconSize(QSize(32, 32))
-        else:
-            self.setIconSize(QSize(64, 64))
-        stylesheet = 'QWidget{font-size: ' + str(font_size) + 'px;}'
-        self.setStyleSheet(stylesheet)
-
-    def addAction(self, name, display_name, tool_text):
-        """Docstring."""
-
-        action = QAction(QIcon(resource_filename('resources', 'images/')),
-                         display_name, self, toolTip=tool_text)
-        super().addAction(action)
-        self.slots[name] = action
-
-    def connect(self, name, handler, shortcut=None):
-        """Docstring."""
-
-        self.slots[name].pyqtConfigure(triggered=handler)
-        if shortcut:
-            self.slots[name].setShortcut(QKeySequence(shortcut))
-
-
-class FileTabs(QTabWidget):
-    """Docstring."""
-
-    def __init__(self):
-        """Docstring."""
-
-        super(FileTabs, self).__init__()
-        self.setTabsClosable(True)
-        self.tabCloseRequested.connect(self.removeTab)
-        self.currentChanged.connect(self.change_tab)
-
-    def remove_tab(self, tab_idx):
-        """Remove tab with index `tab_idx`."""
-
-        super(FileTabs, self).removeTab(tab_idx)
-
-    def change_tab(self, tab_id):
-        """Docstring."""
-
-        current_tab = self.widget(tab_id)
-        window = self.nativeParentWidget()
-        if current_tab:
-            window.update_title(current_tab.label)
-        else:
-            window.update_title(None)
-
-
-class Window(QMainWindow):
+class TopLevelWindow(QMainWindow):
     """Docstring."""
 
     title = "Atlas"
     icon = 'icon'
     timer = None
-    # ~ plotter = None
-    zooms = ('xs', 's', 'm', 'l', 'xl', 'xxl', 'xxxl')  # levels of zoom.
-    zoom_position = 2  # current level of zoom (as position in zooms tuple).
-    _zoom_in = pyqtSignal(str)
-    _zoom_out = pyqtSignal(str)
     open_file = pyqtSignal(str)
     previous_folder = None
 
@@ -157,14 +35,11 @@ class Window(QMainWindow):
         super().__init__(parent)
         self.widget = QWidget()
         self.read_only_tabs = False
-        self.button_bar = ButtonBar(self.widget)
         self.menu_bar = MenuBar(self.widget)
-        self.status_bar = StatusBar(parent=self)
         self.tabs = FileTabs()
         self.open_file_heading = "Open file"
         self.save_file_heading = "Save file"
         self.atlas_file_extension_for_saving = "Atlas (*.pmd.txt)"
-
 
     def setup(self):
         """Docstring."""
@@ -179,8 +54,6 @@ class Window(QMainWindow):
         self.widget.setLayout(widget_layout)
         self.tabs.setMovable(True)
         self.setCentralWidget(self.tabs)
-        self.setStatusBar(self.status_bar)
-        self.addToolBar(self.button_bar)
         self.showMaximized()
 
     def setup_menu(self, functions):
@@ -188,7 +61,7 @@ class Window(QMainWindow):
 
         actions = dict()
         menu_bar = self.menuBar()
-        
+
         # Portfolio
         portfolio_menu = menu_bar.addMenu("Portfolio")
         portfolio_menu.addAction(QAction("New portfolio", self))
@@ -203,7 +76,7 @@ class Window(QMainWindow):
 
         # File
         file_menu = menu_bar.addMenu("File")
-        
+
         new_file = QAction("New file", self)
         new_file.setShortcut("Ctrl+N")
         file_menu.addAction(new_file)
@@ -222,7 +95,7 @@ class Window(QMainWindow):
         save_file_as = QAction("Save file as", self)
         file_menu.addAction(save_file_as)
         actions['save_file_as'] = save_file_as
-        
+
         close_file = QAction("Close file", self)
         close_file.setShortcut("Ctrl+W")
         file_menu.addAction(close_file)
@@ -264,7 +137,8 @@ class Window(QMainWindow):
         task_menu.addAction(mark_task_done)
         actions['mark_task_done'] = mark_task_done
 
-        mark_task_for_rescheduling = QAction("Mark task for rescheduling", self)
+        mark_task_for_rescheduling = QAction("Mark task for rescheduling",
+                                             self)
         mark_task_for_rescheduling.setShortcut("Alt+R")
         task_menu.addAction(mark_task_for_rescheduling)
         actions['mark_task_for_rescheduling'] = mark_task_for_rescheduling
@@ -373,42 +247,6 @@ class Window(QMainWindow):
         for key in actions:
             actions[key].triggered.connect(functions[key])
 
-    def wheel_event(self, event):
-        """Docstring."""
-
-        modifiers = QApplication.keyboardModifiers()
-        if modifiers == Qt.ControlModifier:
-            zoom = event.angleDelta().y() > 0
-            if zoom:
-                self.zoom_in()
-            else:
-                self.zoom_out()
-            event.ignore()
-
-    def set_zoom(self):
-        """Docstring."""
-
-        self._zoom_in.emit(self.zooms[self.zoom_position])
-
-    def zoom_in(self):
-        """Docstring."""
-
-        self.zoom_position = min(self.zoom_position + 1, len(self.zooms) - 1)
-        self._zoom_in.emit(self.zooms[self.zoom_position])
-
-    def zoom_out(self):
-        """Docstring."""
-
-        self.zoom_position = max(self.zoom_position - 1, 0)
-        self._zoom_out.emit(self.zooms[self.zoom_position])
-
-    def connect_zoom(self, widget):
-        """Docstring."""
-
-        self._zoom_in.connect(widget.set_zoom)
-        self._zoom_out.connect(widget.set_zoom)
-        widget.set_zoom(self.zooms[self.zoom_position])
-
     @property
     def current_tab(self):
         """Docstring."""
@@ -420,14 +258,18 @@ class Window(QMainWindow):
 
         extensions = '*' + extensions
         path, _ = QFileDialog.getOpenFileName(self.widget,
-            self.open_file_heading, folder, extensions)
+                                              self.open_file_heading,
+                                              folder,
+                                              extensions)
         return path
 
     def get_save_file_path(self, folder):
         """Get the path of the file to save (dialog)."""
 
-        path, _ = QFileDialog.getSaveFileName(self.widget,
-            self.open_file_heading, folder, self.atlas_file_extension_for_saving)
+        path, _ = QFileDialog.getSaveFileName(
+                self.widget,
+                self.open_file_heading, folder,
+                self.atlas_file_extension_for_saving)
         return path
 
     def add_tab(self, path, text, newline):
@@ -452,7 +294,6 @@ class Window(QMainWindow):
             self.open_file.emit(file)
 
         self.tabs.setCurrentIndex(new_tab_index)
-        self.connect_zoom(new_tab)
         new_tab.setFocus()
         if self.read_only_tabs:
             new_tab.setReadOnly(self.read_only_tabs)
@@ -508,15 +349,15 @@ class Window(QMainWindow):
         message_box.setStandardButtons(message_box.Cancel | message_box.Ok)
         message_box.setDefaultButton(message_box.Cancel)
         return message_box.exec()
-    
+
     def show_yes_no_question(self, message, information=None):
         """Ask the user a yes/no/cancel question.
-        
+
         Answering 'Yes' allows for performing a certain action; answering 'No'
         allows for not performing the same action. Answering with 'Cancel'
         aborts the question and goes back to normal program operation mode so
         that the user can make their decision in that mode before proceeding.
-        
+
         """
 
         message_box = QMessageBox(self)
@@ -537,24 +378,6 @@ class Window(QMainWindow):
         if filename:
             title += " - " + filename
         self.setWindowTitle(title)
-
-    def size_window(self, x=None, y=None, w=None, h=None):
-        """Docstring."""
-
-        screen_width, screen_height = screen_size()
-        w = int(screen_width * 0.8) if w is None else w
-        h = int(screen_height * 0.8) if h is None else h
-        self.resize(w, h)
-        size = self.geometry()
-        x = (screen_width - size.width()) / 2 if x is None else x
-        y = (screen_height - size.height()) / 2 if y is None else y
-        self.move(x, y)
-
-    def resize_event(self, resize_event):
-        """Docstring."""
-
-        size = resize_event.size()
-        self.button_bar.set_responsive_mode(size.width(), size.height())
 
     def change_mode(self):
         """Docstring."""
@@ -620,15 +443,6 @@ class Window(QMainWindow):
             return log_entry.log_entry()
         return None
 
-    def show_log_expense(self):
-        """Docstring."""
-
-        log_entry = LogExpenseDialog(self)
-        log_entry.setup()
-        if log_entry.exec():
-            return log_entry.log_entry()
-        return None
-
     def show_add_adhoc_task(self):
         """Docstring."""
 
@@ -637,18 +451,3 @@ class Window(QMainWindow):
         if adhoc_task.exec():
             return adhoc_task.adhoc_task()
         return None
-
-
-class StatusBar(QStatusBar):
-    """Docstring."""
-
-    def __init__(self, parent=None):
-        """Docstring."""
-
-        # Keep this despite pylint (useless-super-delegation)
-        super().__init__(parent)
-
-    def set_message(self, message, pause=5000):
-        """Docstring."""
-
-        self.showMessage(message, pause)
