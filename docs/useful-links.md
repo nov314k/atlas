@@ -9,6 +9,7 @@
 ## todo.txt
 
 * [https://github.com/todotxt/todo.txt](https://github.com/todotxt/todo.txt)
+* [https://github.com/todotxt/todo.txt-cli](https://github.com/todotxt/todo.txt-cli)
 
 ## Getting Things Done
 
