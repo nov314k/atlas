@@ -5,6 +5,10 @@
 
 _Atlas_ (Automatic Task List Administration System) is a personal task management tool. It automatically compiles a daily todo task list based on task definitions in all relevant areas of life, and personal preferences.
 
+> "Happiness does not come from doing easy work, but from the
+> afterglow of satisfaction that comes after the achievement of a
+> difficult task that demanded our best." Theodore Isaac Rubin
+
 # What can _Atlas_ do for you?
 
 _Atlas_ helps you to:
